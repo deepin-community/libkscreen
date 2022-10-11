@@ -1,0 +1,185 @@
+Author: Maximiliano Curia <maxy@gnuservers.com.ar>
+Pino: Pino Toscano <pino@debian.org>
+Forwarded: not-needed
+Last-Update: 2020-11-18
+Description: Make kwayland optional
+ .
+ This allows the build of libkscreen and its dependencies in non linux arches.
+
+---
+ CMakeLists.txt            |    2 +-
+ autotests/CMakeLists.txt  |   42 +++++++++++++++++++++++-------------------
+ backends/CMakeLists.txt   |    4 +++-
+ src/doctor/CMakeLists.txt |   15 ++++++++++++---
+ src/doctor/doctor.cpp     |   10 ++++++++++
+ tests/CMakeLists.txt      |    4 +++-
+ 6 files changed, 52 insertions(+), 25 deletions(-)
+
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -31,7 +31,7 @@ find_package(QtWaylandScanner REQUIRED)
+ find_package(WaylandScanner)
+ 
+ # Wayland backend
+-find_package(KF5Wayland ${KF5_MIN_VERSION} CONFIG REQUIRED)
++find_package(KF5Wayland ${KF5_MIN_VERSION} CONFIG)
+ add_feature_info("KF5Wayland" KF5Wayland_FOUND "Required for building libkscreen's KWayland backend")
+ 
+ find_package(PlasmaWaylandProtocols 1.4.0 CONFIG)
+--- a/autotests/CMakeLists.txt
++++ b/autotests/CMakeLists.txt
+@@ -1,6 +1,9 @@
+ add_definitions(-DTEST_DATA="${CMAKE_CURRENT_SOURCE_DIR}/configs/")
+ 
+-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR}/tests/kwayland/)
++include_directories(${CMAKE_CURRENT_BINARY_DIR})
++if(${KF5Wayland_FOUND})
++    include_directories(${CMAKE_SOURCE_DIR}/tests/kwayland/)
++endif()
+ 
+ macro(KSCREEN_ADD_TEST)
+     foreach(_testname ${ARGN})
+@@ -25,24 +28,25 @@ kscreen_add_test(testlog)
+ kscreen_add_test(testmodelistchange)
+ kscreen_add_test(testedid)
+ 
+-set(KSCREEN_WAYLAND_LIBS
+-    KF5::WaylandServer KF5::WaylandClient
+-)
+-
+-# For WaylandConfigReader and TestServer
+-set(KSCREEN_WAYLAND_SRCS
+-    ${CMAKE_SOURCE_DIR}/tests/kwayland/waylandconfigreader.cpp
+-    ${CMAKE_SOURCE_DIR}/tests/kwayland/waylandtestserver.cpp
+-)
+-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../backends/kwayland)
+-
+-kscreen_add_test(testkwaylandbackend)
+-kscreen_add_test(testkwaylandconfig)
+-kscreen_add_test(testkwaylanddpms)
+-
+-set(KSCREEN_WAYLAND_LIBS "")
+-set(KSCREEN_WAYLAND_SRCS "")
+-
++if(${KF5Wayland_FOUND})
++    set(KSCREEN_WAYLAND_LIBS
++        KF5::WaylandServer KF5::WaylandClient
++    )
++
++    # For WaylandConfigReader and TestServer
++    set(KSCREEN_WAYLAND_SRCS
++        ${CMAKE_SOURCE_DIR}/tests/kwayland/waylandconfigreader.cpp
++        ${CMAKE_SOURCE_DIR}/tests/kwayland/waylandtestserver.cpp
++    )
++    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../backends/kwayland)
++
++    kscreen_add_test(testkwaylandbackend)
++    kscreen_add_test(testkwaylandconfig)
++    kscreen_add_test(testkwaylanddpms)
++
++    set(KSCREEN_WAYLAND_LIBS "")
++    set(KSCREEN_WAYLAND_SRCS "")
++endif()
+ 
+ if (ENABLE_XRANDR_TESTS)
+     kscreen_add_test(textxrandr)
+--- a/backends/CMakeLists.txt
++++ b/backends/CMakeLists.txt
+@@ -1,6 +1,8 @@
+ add_subdirectory(fake)
+ add_subdirectory(qscreen)
+-add_subdirectory(kwayland)
++if(${KF5Wayland_FOUND})
++	add_subdirectory(kwayland)
++endif()
+ 
+ if(${XCB_RANDR_FOUND})
+     message(STATUS "Will build xrandr backend.")
+--- a/tests/CMakeLists.txt
++++ b/tests/CMakeLists.txt
+@@ -1,4 +1,6 @@
+ add_executable(printconfig testplugandplay.cpp testpnp.cpp)
+ target_link_libraries(printconfig Qt::Gui KF5::Screen)
+ 
+-add_subdirectory(kwayland)
++if(${KF5Wayland_FOUND})
++    add_subdirectory(kwayland)
++endif()
+--- a/src/doctor/CMakeLists.txt
++++ b/src/doctor/CMakeLists.txt
+@@ -1,4 +1,13 @@
+-
+-add_executable(kscreen-doctor main.cpp doctor.cpp dpmsclient.cpp)
+-target_link_libraries(kscreen-doctor Qt::DBus KF5::Screen KF5::WaylandClient)
++ 
++set(sources main.cpp doctor.cpp)
++if(${KF5Wayland_FOUND})
++    list(APPEND sources dpmsclient.cpp)
++    add_definitions(-DHAVE_KWAYLAND)
++endif()
++add_executable(kscreen-doctor ${sources})
++target_link_libraries(kscreen-doctor Qt5::DBus KF5::Screen)
++if(${KF5Wayland_FOUND})
++    target_link_libraries(kscreen-doctor KF5::WaylandClient)
++endif()
+ install(TARGETS kscreen-doctor ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
++
+--- a/src/doctor/doctor.cpp
++++ b/src/doctor/doctor.cpp
+@@ -5,7 +5,9 @@
+  */
+ 
+ #include "doctor.h"
++#ifdef HAVE_KWAYLAND
+ #include "dpmsclient.h"
++#endif
+ 
+ #include <QCollator>
+ #include <QCommandLineParser>
+@@ -78,6 +80,7 @@ void Doctor::start(QCommandLineParser *p
+         return;
+     }
+     if (m_parser->isSet(QStringLiteral("dpms"))) {
++#ifdef HAVE_KWAYLAND
+         if (!QGuiApplication::platformName().startsWith(QLatin1String("wayland"))) {
+             cerr << "DPMS is only supported on Wayland." << Qt::endl;
+             // We need to kick the event loop, otherwise .quit() hangs
+@@ -99,6 +102,9 @@ void Doctor::start(QCommandLineParser *p
+         } else {
+             setDpms(dpmsArg);
+         }
++#else
++        cout << "DPMS changing supported only with Wayland";
++#endif
+         return;
+     }
+ 
+@@ -116,6 +122,7 @@ void Doctor::start(QCommandLineParser *p
+ 
+ void KScreen::Doctor::setDpms(const QString &dpmsArg)
+ {
++#ifdef HAVE_KWAYLAND
+     qDebug() << "SetDpms: " << dpmsArg;
+     connect(m_dpmsClient, &DpmsClient::ready, this, [this, dpmsArg]() {
+         cout << "DPMS.ready()";
+@@ -129,10 +136,12 @@ void KScreen::Doctor::setDpms(const QStr
+     });
+ 
+     m_dpmsClient->connect();
++#endif
+ }
+ 
+ void Doctor::showDpms()
+ {
++#ifdef HAVE_KWAYLAND
+     m_dpmsClient = new DpmsClient(this);
+ 
+     connect(m_dpmsClient, &DpmsClient::ready, this, []() {
+@@ -140,6 +149,7 @@ void Doctor::showDpms()
+     });
+ 
+     m_dpmsClient->connect();
++#endif
+ }
+ 
+ void Doctor::showBackends() const

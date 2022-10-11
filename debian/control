@@ -1,0 +1,63 @@
+Source: libkscreen
+Section: libs
+Priority: optional
+Maintainer: Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>
+Uploaders: Scarlett Moore <sgmoore@kde.org>,
+           Patrick Franz <deltaone@debian.org>,
+           Norbert Preining <norbert@preining.info>,
+Build-Depends: cmake (>= 3.16~),
+               debhelper-compat (= 13),
+               extra-cmake-modules (>= 5.86~),
+               libkf5wayland-dev (>= 4:5.86~) [linux-any],
+               libqt5x11extras5-dev (>= 5.15.0~),
+               libx11-dev,
+               libx11-xcb-dev,
+               libxcb-randr0-dev,
+               libxcb1-dev,
+               libxrandr-dev,
+               pkg-config,
+               pkg-kde-tools (>= 0.15.32~),
+               plasma-wayland-protocols (>= 1.4.0~),
+               qtbase5-dev (>= 5.15.0~),
+               qtwayland5-dev-tools,
+Standards-Version: 4.5.1
+Homepage: https://invent.kde.org/plasma/libkscreen
+Vcs-Browser: https://salsa.debian.org/qt-kde-team/kde/libkscreen
+Vcs-Git: https://salsa.debian.org/qt-kde-team/kde/libkscreen.git
+Rules-Requires-Root: no
+
+Package: libkf5screen-bin
+Architecture: any
+Multi-Arch: foreign
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: library for screen management - helpers
+ The KDE multiple monitor support is trying be as smart as possible
+ adapting the behavior of it to each use case making the configuration
+ of monitors as simple as plugging them to your computer.
+ .
+ This package contains the library helpers and the corresponding D-Bus service.
+
+Package: libkf5screen-dev
+Section: libdevel
+Architecture: any
+Depends: libkf5screen7 (= ${binary:Version}),
+         qtbase5-dev (>= 5.15.0~),
+         ${misc:Depends},
+Description: library for screen management - development files
+ The KDE multiple monitor support is trying be as smart as possible
+ adapting the behavior of it to each use case making the configuration
+ of monitors as simple as plugging them to your computer.
+ .
+ This package contains the files necessary for development.
+
+Package: libkf5screen7
+Architecture: any
+Multi-Arch: same
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Recommends: hwdata
+Description: library for screen management - shared library
+ The KDE multiple monitor support is trying be as smart as possible
+ adapting the behavior of it to each use case making the configuration
+ of monitors as simple as plugging them to your computer.
+ .
+ This package contains the shared library

@@ -1,0 +1,5 @@
+usr/bin/kscreen-doctor
+usr/lib/*/libexec/kf5/kscreen_backend_launcher
+usr/lib/*/qt5/plugins/kf5/kscreen/
+usr/share/dbus-1/services/org.kde.kscreen.service
+usr/share/qlogging-categories5/libkscreen.categories
