@@ -4,19 +4,18 @@
  *  SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
-#ifndef KSCREEN_DOCTOR_H
-#define KSCREEN_DOCTOR_H
+#pragma once
 
-#include "../config.h"
 #include <QCommandLineParser>
 #include <QObject>
 
 #include "output.h"
+#include "types.h"
 
 namespace KScreen
 {
 class ConfigOperation;
-class DpmsClient;
+class Dpms;
 
 class Doctor : public QObject
 {
@@ -29,23 +28,26 @@ public:
     void setOptionList(const QStringList &positionalArgs);
     void start(QCommandLineParser *m_parser);
     void configReceived(KScreen::ConfigOperation *op);
-
-    void showDpms();
+    OutputPtr findOutput(const QString &query);
+    KScreen::ModePtr findMode(OutputPtr output, const QString &query);
 
     void showBackends() const;
     void showOutputs() const;
     void showJson() const;
-    int outputCount() const;
-    void setDpms(const QString &dpmsArg);
 
-    bool setEnabled(int id, bool enabled);
-    bool setPosition(int id, const QPoint &pos);
-    bool setMode(int id, const QString &mode_id);
-    bool setScale(int id, qreal scale);
-    bool setRotation(int id, KScreen::Output::Rotation rot);
-    bool setOverscan(int id, uint32_t overscan);
-    bool setVrrPolicy(int id, KScreen::Output::VrrPolicy policy);
-    bool setRgbRange(int id, KScreen::Output::RgbRange rgbRange);
+    void setEnabled(OutputPtr output, bool enable = true);
+    void setPosition(OutputPtr output, const QPoint &pos);
+    bool setMode(OutputPtr output, const QString &query);
+    void setScale(OutputPtr output, qreal scale);
+    void setRotation(OutputPtr output, KScreen::Output::Rotation rot);
+    void setOverscan(OutputPtr output, uint32_t overscan);
+    void setVrrPolicy(OutputPtr output, KScreen::Output::VrrPolicy policy);
+    void setRgbRange(OutputPtr output, KScreen::Output::RgbRange rgbRange);
+    void setPrimary(OutputPtr output);
+    void setPriority(OutputPtr output, uint32_t priority);
+    void setHdrEnabled(OutputPtr output, bool enable);
+    void setSdrBrightness(OutputPtr output, uint32_t brightness);
+    void setWcgEnabled(OutputPtr output, bool enable);
 
 Q_SIGNALS:
     void outputsChanged();
@@ -60,9 +62,7 @@ private:
     QCommandLineParser *m_parser;
     bool m_changed;
     QStringList m_outputArgs;
-    DpmsClient *m_dpmsClient;
+    Dpms *m_dpmsClient;
 };
 
 } // namespace
-
-#endif // KSCREEN_WAYLAND_SCREEN_H

@@ -5,12 +5,18 @@
  *  SPDX-License-Identifier: LGPL-2.1-or-later
  */
 #include "waylandoutputdevice.h"
-#include "../utils.h"
 #include "waylandoutputmanagement.h"
 
 #include "kscreen_kwayland_logging.h"
 
+#include "../utils.h"
+
+#include <mode.h>
+#include <output.h>
+
 #include <wayland-server-protocol.h>
+
+#include <utility>
 
 using namespace KScreen;
 
@@ -47,13 +53,7 @@ void WaylandOutputDevice::kde_output_device_v2_geometry(int32_t x,
 
 void WaylandOutputDevice::kde_output_device_v2_current_mode(struct ::kde_output_device_mode_v2 *mode)
 {
-    auto m = WaylandOutputDeviceMode::get(mode);
-
-    if (*m == *m_mode) {
-        // unchanged
-        return;
-    }
-    m_mode = m;
+    m_mode = WaylandOutputDeviceMode::get(mode);
 }
 
 void WaylandOutputDevice::kde_output_device_v2_mode(struct ::kde_output_device_mode_v2 *mode)
@@ -98,17 +98,13 @@ Output::Rotation toKScreenRotation(int32_t transform)
     case WL_OUTPUT_TRANSFORM_270:
         return Output::Right;
     case WL_OUTPUT_TRANSFORM_FLIPPED:
-        qCWarning(KSCREEN_WAYLAND) << "flipped transform is unsupported by kscreen";
-        return Output::None;
+        return Output::Flipped;
     case WL_OUTPUT_TRANSFORM_FLIPPED_90:
-        qCWarning(KSCREEN_WAYLAND) << "flipped-90 transform is unsupported by kscreen";
-        return Output::Left;
+        return Output::Flipped90;
     case WL_OUTPUT_TRANSFORM_FLIPPED_180:
-        qCWarning(KSCREEN_WAYLAND) << "flipped-180 transform is unsupported by kscreen";
-        return Output::Inverted;
+        return Output::Flipped180;
     case WL_OUTPUT_TRANSFORM_FLIPPED_270:
-        qCWarning(KSCREEN_WAYLAND) << "flipped-270 transform is unsupported by kscreen";
-        return Output::Right;
+        return Output::Flipped270;
     default:
         Q_UNREACHABLE();
     }
@@ -125,6 +121,14 @@ wl_output_transform toKWaylandTransform(const Output::Rotation rotation)
         return WL_OUTPUT_TRANSFORM_180;
     case Output::Right:
         return WL_OUTPUT_TRANSFORM_270;
+    case Output::Flipped:
+        return WL_OUTPUT_TRANSFORM_FLIPPED;
+    case Output::Flipped90:
+        return WL_OUTPUT_TRANSFORM_FLIPPED_90;
+    case Output::Flipped180:
+        return WL_OUTPUT_TRANSFORM_FLIPPED_180;
+    case Output::Flipped270:
+        return WL_OUTPUT_TRANSFORM_FLIPPED_270;
     default:
         Q_UNREACHABLE();
     }
@@ -134,30 +138,26 @@ void KScreen::WaylandOutputDevice::updateKScreenModes(OutputPtr &output)
 {
     ModeList modeList;
     QStringList preferredModeIds;
-    QString currentModeId = QStringLiteral("-1");
-    int modeId = 0;
+    QString currentModeId;
 
-    for (const WaylandOutputDeviceMode *wlMode : qAsConst(m_modes)) {
+    for (const WaylandOutputDeviceMode *wlMode : std::as_const(m_modes)) {
         ModePtr mode(new Mode());
 
-        const QString modeIdStr = QString::number(modeId);
-        // KWayland gives the refresh rate as int in mHz
-        mode->setId(modeIdStr);
-        mode->setRefreshRate(wlMode->refreshRate() / 1000.0);
+        mode->setId(wlMode->id());
+        mode->setRefreshRate(wlMode->refreshRate());
         mode->setSize(wlMode->size());
         mode->setName(modeName(wlMode));
 
         if (m_mode == wlMode) {
-            currentModeId = modeIdStr;
+            currentModeId = wlMode->id();
         }
 
         if (wlMode->preferred()) {
-            preferredModeIds << modeIdStr;
+            preferredModeIds << wlMode->id();
         }
 
         // Add to the modelist which gets set on the output
-        modeList[modeIdStr] = mode;
-        modeId++;
+        modeList[wlMode->id()] = mode;
     }
     output->setCurrentModeId(currentModeId);
     output->setPreferredModes(preferredModeIds);
@@ -170,7 +170,6 @@ void WaylandOutputDevice::updateKScreenOutput(OutputPtr &output)
     output->setId(m_id);
     output->setEnabled(enabled());
     output->setConnected(true);
-    output->setPrimary(true); // FIXME: wayland doesn't have the concept of a primary display
     output->setName(name());
     output->setSizeMm(m_physicalSize);
     output->setPos(m_pos);
@@ -182,23 +181,42 @@ void WaylandOutputDevice::updateKScreenOutput(OutputPtr &output)
     QSize currentSize = m_mode->size();
     output->setSize(output->isHorizontal() ? currentSize : currentSize.transposed());
     output->setScale(m_factor);
-    output->setType(Utils::guessOutputType(m_model, m_model));
-    output->setCapabilities(static_cast<Output::Capabilities>(static_cast<uint32_t>(m_flags)));
+    output->setType(Utils::guessOutputType(m_outputName, m_outputName));
+    output->setCapabilities(static_cast<Output::Capabilities>(static_cast<uint32_t>(m_capabilities)));
     output->setOverscan(m_overscan);
     output->setVrrPolicy(static_cast<Output::VrrPolicy>(m_vrr_policy));
     output->setRgbRange(static_cast<Output::RgbRange>(m_rgbRange));
+    output->setHdrEnabled(m_hdrEnabled);
+    output->setSdrBrightness(m_sdrBrightness);
+    output->setWcgEnabled(m_wideColorGamutEnabled);
+    output->setAutoRotatePolicy(static_cast<Output::AutoRotatePolicy>(m_autoRotatePolicy));
+    output->setIccProfilePath(m_iccProfilePath);
+    output->setSdrGamutWideness(m_sdrGamutWideness);
+    output->setMaxPeakBrightness(m_maxPeakBrightness);
+    output->setMaxAverageBrightness(m_maxAverageBrightness);
+    output->setMinBrightness(m_minBrightness);
+    output->setMaxPeakBrightnessOverride(m_maxPeakBrightnessOverride);
+    output->setMaxAverageBrightnessOverride(m_maxAverageBrightnessOverride);
+    output->setMinBrightnessOverride(m_minBrightnessOverride);
+    output->setColorProfileSource(static_cast<Output::ColorProfileSource>(m_colorProfileSource));
+    output->setBrightness(m_brightness / 10'000.0);
 
     updateKScreenModes(output);
 }
 
 QString WaylandOutputDevice::modeId() const
 {
-    return QString::number(m_modes.indexOf(m_mode));
+    return m_mode->id();
 }
 
-WaylandOutputDeviceMode *WaylandOutputDevice::deviceModeFromId(const int modeId) const
+WaylandOutputDeviceMode *WaylandOutputDevice::deviceModeFromId(const QString &id) const
 {
-    return m_modes.at(modeId);
+    for (WaylandOutputDeviceMode *mode : m_modes) {
+        if (mode->id() == id) {
+            return mode;
+        }
+    }
+    return nullptr;
 }
 
 bool WaylandOutputDevice::setWlConfig(WaylandOutputConfiguration *wlConfig, const KScreen::OutputPtr &output)
@@ -231,13 +249,9 @@ bool WaylandOutputDevice::setWlConfig(WaylandOutputConfiguration *wlConfig, cons
 
     // mode
     const ModePtr mode = output->currentMode();
-    if (mode->size() != pixelSize() || mode->refreshRate() != refreshRate()) {
-        bool toIntOk;
-        int modeId = mode->id().toInt(&toIntOk);
-        Q_ASSERT(toIntOk);
-
+    if (mode->id() != modeId()) {
         changed = true;
-        wlConfig->mode(object(), deviceModeFromId(modeId)->object());
+        wlConfig->mode(object(), deviceModeFromId(mode->id())->object());
     }
 
     // overscan
@@ -256,6 +270,56 @@ bool WaylandOutputDevice::setWlConfig(WaylandOutputConfiguration *wlConfig, cons
         wlConfig->set_rgb_range(object(), static_cast<uint32_t>(output->rgbRange()));
         changed = true;
     }
+    if (output->priority() != m_index) {
+        changed = true;
+    }
+    // always send all outputs
+    if (kde_output_configuration_v2_get_version(wlConfig->object()) >= KDE_OUTPUT_CONFIGURATION_V2_SET_PRIORITY_SINCE_VERSION) {
+        wlConfig->set_priority(object(), output->priority());
+    }
+    if ((output->capabilities() & Output::Capability::HighDynamicRange) && (m_hdrEnabled == 1) != output->isHdrEnabled()) {
+        wlConfig->set_high_dynamic_range(object(), output->isHdrEnabled());
+        changed = true;
+    }
+    if ((output->capabilities() & Output::Capability::HighDynamicRange) && m_sdrBrightness != output->sdrBrightness()) {
+        wlConfig->set_sdr_brightness(object(), output->sdrBrightness());
+        changed = true;
+    }
+    if ((output->capabilities() & Output::Capability::WideColorGamut) && (m_wideColorGamutEnabled == 1) != output->isWcgEnabled()) {
+        wlConfig->set_wide_color_gamut(object(), output->isWcgEnabled());
+        changed = true;
+    }
+    if ((output->capabilities() & Output::Capability::AutoRotation) && m_autoRotatePolicy != static_cast<uint32_t>(output->autoRotatePolicy())) {
+        wlConfig->set_auto_rotate_policy(object(), static_cast<uint32_t>(output->autoRotatePolicy()));
+        changed = true;
+    }
+    if ((output->capabilities() & Output::Capability::IccProfile) && m_iccProfilePath != output->iccProfilePath()) {
+        wlConfig->set_icc_profile_path(object(), output->iccProfilePath());
+        changed = true;
+    }
+    const auto version = kde_output_configuration_v2_get_version(wlConfig->object());
+    if (version >= KDE_OUTPUT_CONFIGURATION_V2_SET_SDR_GAMUT_WIDENESS_SINCE_VERSION && m_sdrGamutWideness != output->sdrGamutWideness()) {
+        wlConfig->set_sdr_gamut_wideness(object(), std::clamp<uint32_t>(std::round(output->sdrGamutWideness() * 10'000), 0, 10'000));
+        changed = true;
+    }
+    if (version >= KDE_OUTPUT_CONFIGURATION_V2_SET_BRIGHTNESS_OVERRIDES_SINCE_VERSION
+        && (m_maxPeakBrightnessOverride != output->maxPeakBrightnessOverride() || m_maxAverageBrightnessOverride != output->maxAverageBrightnessOverride()
+            || m_minBrightnessOverride != output->minBrightnessOverride())) {
+        wlConfig->set_brightness_overrides(object(),
+                                           output->maxPeakBrightnessOverride().value_or(-1),
+                                           output->maxAverageBrightnessOverride().value_or(-1),
+                                           std::round(output->minBrightnessOverride().value_or(-0.000'1) * 10'000.0));
+        changed = true;
+    }
+    if (version >= KDE_OUTPUT_CONFIGURATION_V2_SET_COLOR_PROFILE_SOURCE_SINCE_VERSION
+        && static_cast<Output::ColorProfileSource>(m_colorProfileSource) != output->colorProfileSource()) {
+        wlConfig->set_color_profile_source(object(), static_cast<uint32_t>(output->colorProfileSource()));
+        changed = true;
+    }
+    if (version >= KDE_OUTPUT_CONFIGURATION_V2_SET_BRIGHTNESS_SINCE_VERSION && m_brightness != uint32_t(std::round(output->brightness() * 10'000))) {
+        wlConfig->set_brightness(object(), std::round(output->brightness() * 10'000));
+        changed = true;
+    }
 
     return changed;
 }
@@ -263,18 +327,28 @@ bool WaylandOutputDevice::setWlConfig(WaylandOutputConfiguration *wlConfig, cons
 QString WaylandOutputDevice::modeName(const WaylandOutputDeviceMode *m) const
 {
     return QString::number(m->size().width()) + QLatin1Char('x') + QString::number(m->size().height()) + QLatin1Char('@')
-        + QString::number(qRound(m->refreshRate() / 1000.0));
+        + QString::number(qRound(m->refreshRate()));
 }
 
 QString WaylandOutputDevice::name() const
 {
-    return QStringLiteral("%1 %2").arg(m_manufacturer, m_model);
+    return m_outputName;
 }
 
 QDebug operator<<(QDebug dbg, const WaylandOutputDevice *output)
 {
     dbg << "WaylandOutput(Id:" << output->id() << ", Name:" << QString(output->manufacturer() + QLatin1Char(' ') + output->model()) << ")";
     return dbg;
+}
+
+void WaylandOutputDevice::setIndex(uint32_t index)
+{
+    m_index = index;
+}
+
+uint32_t WaylandOutputDevice::index() const
+{
+    return m_index;
 }
 
 void WaylandOutputDevice::kde_output_device_v2_done()
@@ -284,7 +358,12 @@ void WaylandOutputDevice::kde_output_device_v2_done()
 
 void WaylandOutputDevice::kde_output_device_v2_scale(wl_fixed_t factor)
 {
-    m_factor = wl_fixed_to_double(factor);
+    const double factorAsDouble = wl_fixed_to_double(factor);
+
+    // the fractional scaling protocol only speaks in unit of 120ths
+    // using the same scale throughout makes that simpler
+    // this also eliminates most loss from wl_fixed
+    m_factor = std::round(factorAsDouble * 120) / 120;
 }
 
 void WaylandOutputDevice::kde_output_device_v2_edid(const QString &edid)
@@ -314,7 +393,7 @@ void WaylandOutputDevice::kde_output_device_v2_eisa_id(const QString &eisaId)
 
 void WaylandOutputDevice::kde_output_device_v2_capabilities(uint32_t flags)
 {
-    m_flags = flags;
+    m_capabilities = flags;
 }
 
 void WaylandOutputDevice::kde_output_device_v2_overscan(uint32_t overscan)
@@ -330,6 +409,73 @@ void WaylandOutputDevice::kde_output_device_v2_vrr_policy(uint32_t vrr_policy)
 void WaylandOutputDevice::kde_output_device_v2_rgb_range(uint32_t rgb_range)
 {
     m_rgbRange = rgb_range;
+}
+
+void WaylandOutputDevice::kde_output_device_v2_name(const QString &outputName)
+{
+    m_outputName = outputName;
+}
+
+void WaylandOutputDevice::kde_output_device_v2_high_dynamic_range(uint32_t hdr_enabled)
+{
+    m_hdrEnabled = hdr_enabled == 1;
+    if (version() < KDE_OUTPUT_DEVICE_V2_CAPABILITY_BRIGHTNESS_SINCE_VERSION) {
+        // make the capabilities API be consistent with older versions even if the protocol isn't
+        if (m_hdrEnabled) {
+            m_capabilities |= KDE_OUTPUT_DEVICE_V2_CAPABILITY_BRIGHTNESS;
+        } else {
+            m_capabilities &= ~KDE_OUTPUT_DEVICE_V2_CAPABILITY_BRIGHTNESS;
+        }
+    }
+}
+
+void WaylandOutputDevice::kde_output_device_v2_sdr_brightness(uint32_t sdr_brightness)
+{
+    m_sdrBrightness = sdr_brightness;
+}
+
+void WaylandOutputDevice::kde_output_device_v2_wide_color_gamut(uint32_t wcg_enabled)
+{
+    m_wideColorGamutEnabled = wcg_enabled == 1;
+}
+
+void WaylandOutputDevice::kde_output_device_v2_auto_rotate_policy(uint32_t policy)
+{
+    m_autoRotatePolicy = policy;
+}
+
+void WaylandOutputDevice::kde_output_device_v2_icc_profile_path(const QString &profile)
+{
+    m_iccProfilePath = profile;
+}
+
+void WaylandOutputDevice::kde_output_device_v2_brightness_metadata(uint32_t max_peak_brightness, uint32_t max_frame_average_brightness, uint32_t min_brightness)
+{
+    m_maxPeakBrightness = max_peak_brightness;
+    m_maxAverageBrightness = max_frame_average_brightness;
+    m_minBrightness = min_brightness / 10'000.0;
+}
+
+void WaylandOutputDevice::kde_output_device_v2_brightness_overrides(int32_t max_peak_brightness, int32_t max_average_brightness, int32_t min_brightness)
+{
+    m_maxPeakBrightnessOverride = max_peak_brightness == -1 ? std::nullopt : std::optional(max_peak_brightness);
+    m_maxAverageBrightnessOverride = max_average_brightness == -1 ? std::nullopt : std::optional(max_average_brightness);
+    m_minBrightnessOverride = min_brightness == -1 ? std::nullopt : std::optional(min_brightness / 10'000.0);
+}
+
+void WaylandOutputDevice::kde_output_device_v2_sdr_gamut_wideness(uint32_t value)
+{
+    m_sdrGamutWideness = value / 10'000.0;
+}
+
+void WaylandOutputDevice::kde_output_device_v2_color_profile_source(uint32_t source)
+{
+    m_colorProfileSource = source;
+}
+
+void WaylandOutputDevice::kde_output_device_v2_brightness(uint32_t brightness)
+{
+    m_brightness = brightness;
 }
 
 QByteArray WaylandOutputDevice::edid() const
@@ -372,7 +518,7 @@ QSize WaylandOutputDevice::pixelSize() const
     return m_mode->size();
 }
 
-int WaylandOutputDevice::refreshRate() const
+float WaylandOutputDevice::refreshRate() const
 {
     return m_mode->refreshRate();
 }
@@ -389,7 +535,7 @@ uint32_t WaylandOutputDevice::overscan() const
 
 uint32_t WaylandOutputDevice::capabilities() const
 {
-    return m_flags;
+    return m_capabilities;
 }
 
 uint32_t WaylandOutputDevice::rgbRange() const
@@ -397,4 +543,4 @@ uint32_t WaylandOutputDevice::rgbRange() const
     return m_rgbRange;
 }
 
-#include "waylandoutputdevice.moc"
+#include "moc_waylandoutputdevice.cpp"

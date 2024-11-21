@@ -12,8 +12,7 @@
  * releases
  */
 
-#ifndef KSCREEN_BACKENDMANAGER_H
-#define KSCREEN_BACKENDMANAGER_H
+#pragma once
 
 #include <QDBusServiceWatcher>
 #include <QEventLoop>
@@ -72,6 +71,25 @@ public:
      */
     static QFileInfoList listBackends();
 
+    /** Set arguments map which a backend may use on initialization.
+     *
+     * Calling this method after a backend has been initialized will have no effect.
+     * Arguments map will NOT be automatically cleared on backend shutdown; which
+     * makes possible setting arguments before restarting backend in tests.
+     *
+     * @param map of arbitrary arguments for backends; each backend is free to interpret
+     * them as it sees fit.
+     * @since 5.27
+     */
+    void setBackendArgs(const QVariantMap &arguments);
+
+    /** Get arguments map which a backend may use on initialization.
+     *
+     * @return map of arbitrary arguments for backends.
+     * @since 5.27
+     */
+    QVariantMap getBackendArgs();
+
     /** Encapsulates the plugin loading logic.
      *
      * @param loader a pointer to the QPluginLoader, the caller is
@@ -125,6 +143,7 @@ private:
     QString mBackendService;
     QDBusServiceWatcher mServiceWatcher;
     KScreen::ConfigPtr mConfig;
+    QVariantMap mBackendArguments;
     QTimer mResetCrashCountTimer;
     bool mShuttingDown;
     int mRequestsCounter;
@@ -132,11 +151,9 @@ private:
 
     // For in-process operation
     QPluginLoader *mLoader;
-    QPair<KScreen::AbstractBackend *, QVariantMap> m_inProcessBackend;
+    KScreen::AbstractBackend *mInProcessBackend;
 
     Method mMethod;
 };
 
 }
-
-#endif // KSCREEN_BACKENDMANAGER_H

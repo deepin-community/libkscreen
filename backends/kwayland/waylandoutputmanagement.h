@@ -4,16 +4,20 @@
  *
  *  SPDX-License-Identifier: LGPL-2.1-or-later
  */
-#ifndef WAYLANDOUTPUTMANAGEMENT_H
-#define WAYLANDOUTPUTMANAGEMENT_H
+#pragma once
 
 #include "qwayland-kde-output-management-v2.h"
+#include "qwayland-kde-output-order-v1.h"
 
 #include <QObject>
 #include <QSize>
+#include <QWaylandClientExtension>
 
 namespace KScreen
 {
+class WaylandConfig;
+class WaylandOutputDevice;
+
 class WaylandOutputConfiguration : public QObject, public QtWayland::kde_output_configuration_v2
 {
     Q_OBJECT
@@ -29,15 +33,33 @@ protected:
     void kde_output_configuration_v2_failed() override;
 };
 
-class WaylandOutputManagement : public QObject, public QtWayland::kde_output_management_v2
+class WaylandOutputManagement : public QWaylandClientExtensionTemplate<WaylandOutputManagement>, public QtWayland::kde_output_management_v2
 {
     Q_OBJECT
 public:
-    WaylandOutputManagement(struct ::wl_registry *registry, int id, int version);
+    explicit WaylandOutputManagement(int version);
+    ~WaylandOutputManagement() override;
 
     WaylandOutputConfiguration *createConfiguration();
 };
 
-}
+class WaylandOutputOrder : public QObject, public QtWayland::kde_output_order_v1
+{
+    Q_OBJECT
+public:
+    WaylandOutputOrder(struct ::wl_registry *registry, int id, int version);
+    ~WaylandOutputOrder();
 
-#endif // WAYLANDOUTPUTMANAGEMENT_H
+    QList<QString> order() const;
+
+Q_SIGNALS:
+    void outputOrderChanged(const QList<QString> &outputs);
+
+private:
+    void kde_output_order_v1_output(const QString &output_name) override;
+    void kde_output_order_v1_done() override;
+
+    QList<QString> m_outputOrder;
+    QList<QString> m_pendingOutputOrder;
+};
+}

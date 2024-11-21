@@ -44,13 +44,21 @@ int main(int argc, char **argv)
         "\n   Disable the hdmi output, enable the laptop panel and set it to a specific mode\n"
         "   $ kscreen-doctor output.HDMI-2.disable output.eDP-1.mode.1 output.eDP-1.enable\n"
         "\n   Position the hdmi monitor on the right of the laptop panel\n"
-        "   $ kscreen-doctor output.HDMI-2.position.0,1280 output.eDP-1.position.0,0\n"
+        "   $ kscreen-doctor output.HDMI-2.position.1280,0 output.eDP-1.position.0,0\n"
         "\n   Set resolution mode\n"
         "   $ kscreen-doctor output.HDMI-2.mode.1920x1080@60 \n"
         "\n   Set scale (note: fractional scaling is only supported on wayland)\n"
         "   $ kscreen-doctor output.HDMI-2.scale.2 \n"
         "\n   Set rotation (possible values: none, left, right, inverted)\n"
-        "   $ kscreen-doctor output.HDMI-2.rotation.left \n");
+        "   $ kscreen-doctor output.HDMI-2.rotation.left \n"
+        "\n   Set HDR mode (possible values: enable, disable)\n"
+        "   $ kscreen-doctor output.HDMI-2.hdr.enable\n"
+        "\n   Set SDR brightness (possible values: 100-1000)\n"
+        "   $ kscreen-doctor output.HDMI-2.sdr-brightness.300\n"
+        "\n   Set wide color gamut mode (possible values: enable, disable)\n"
+        "   $ kscreen-doctor output.HDMI-2.wcg.enable\n"
+        "\n   Set ICC profile path\n"
+        "   $ kscreen-doctor output.HDMI-2.iccprofile.\"/path/to/profile.icc\"\n");
     /*
         "\nError codes:\n"
         "   2 : general parse error\n"
@@ -70,6 +78,7 @@ int main(int argc, char **argv)
         "                output.eDP-1.position.1280,0\n"
         "Multiple settings are passed in order to have kscreen-doctor apply these settings in one go.\n");
 
+    QGuiApplication::setDesktopSettingsAware(false);
     QGuiApplication app(argc, argv);
 
     KScreen::Doctor server;

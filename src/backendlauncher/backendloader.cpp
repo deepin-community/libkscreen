@@ -16,7 +16,6 @@
 #include <QDBusConnectionInterface>
 #include <QDir>
 #include <QPluginLoader>
-#include <QX11Info>
 
 #include <memory>
 
@@ -113,3 +112,5 @@ void BackendLoader::quit()
 {
     qApp->quit();
 }
+
+#include "moc_backendloader.cpp"

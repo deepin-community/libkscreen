@@ -5,9 +5,9 @@
  */
 #include "xrandrmode.h"
 
-#include "mode.h"
-#include "output.h"
 #include "xrandroutput.h"
+
+#include "mode.h"
 
 XRandRMode::XRandRMode(const xcb_randr_mode_info_t &modeInfo, XRandROutput *output)
     : QObject(output)
@@ -67,3 +67,5 @@ QString XRandRMode::name() const
 {
     return m_name;
 }
+
+#include "moc_xrandrmode.cpp"

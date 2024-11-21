@@ -7,6 +7,7 @@
  */
 
 #include "configoperation.h"
+
 #include "backendmanager_p.h"
 #include "configoperation_p.h"
 
@@ -129,3 +130,7 @@ KScreen::AbstractBackend *ConfigOperationPrivate::loadBackend()
     }
     return backend;
 }
+
+#include "moc_configoperation.cpp"
+
+#include "moc_configoperation_p.cpp"

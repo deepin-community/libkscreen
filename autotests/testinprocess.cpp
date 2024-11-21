@@ -6,14 +6,14 @@
 
 #include <QCoreApplication>
 #include <QDBusConnectionInterface>
+#include <QLoggingCategory>
 #include <QObject>
 #include <QSignalSpy>
-#include <QtTest>
+#include <QTest>
 
 #include "../src/backendmanager_p.h"
 #include "../src/config.h"
 #include "../src/configmonitor.h"
-#include "../src/edid.h"
 #include "../src/getconfigoperation.h"
 #include "../src/mode.h"
 #include "../src/output.h"
@@ -78,9 +78,9 @@ void TestInProcess::init()
     qputenv("KSCREEN_BACKEND_INPROCESS", "1");
     // Use Fake backend with one of the json configs
     qputenv("KSCREEN_BACKEND", "Fake");
-    qputenv("KSCREEN_BACKEND_ARGS", "TEST_DATA=" TEST_DATA "multipleoutput.json");
 
     KScreen::BackendManager::instance()->shutdownBackend();
+    KScreen::BackendManager::instance()->setBackendArgs({{QStringLiteral("TEST_DATA"), TEST_DATA "multipleoutput.json"}});
 }
 
 void TestInProcess::cleanup()

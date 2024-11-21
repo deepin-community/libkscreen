@@ -1,2 +1,0 @@
-# make sure to pull libkf5screen-bin for libkscreen users
-libkf5screen7: symbols-declares-dependency-on-other-package libkf5screen-bin *

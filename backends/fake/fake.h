@@ -4,10 +4,10 @@
  *  SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
-#ifndef FAKE_BACKEND_H
-#define FAKE_BACKEND_H
+#pragma once
 
 #include "abstractbackend.h"
+#include "config.h"
 
 #include <QLoggingCategory>
 #include <QObject>
@@ -15,7 +15,7 @@
 class Fake : public KScreen::AbstractBackend
 {
     Q_OBJECT
-    Q_PLUGIN_METADATA(IID "org.kf5.kscreen.backends.fake")
+    Q_PLUGIN_METADATA(IID "org.kf6.kscreen.backends.fake")
 
 public:
     explicit Fake();
@@ -43,7 +43,7 @@ private Q_SLOTS:
 
 private:
     QString mConfigFile;
+    KScreen::Config::Features mSupportedFeatures = KScreen::Config::Feature::None;
     mutable KScreen::ConfigPtr mConfig;
 };
 Q_DECLARE_LOGGING_CATEGORY(KSCREEN_FAKE)
-#endif // FAKE_BACKEND_H

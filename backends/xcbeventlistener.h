@@ -4,15 +4,15 @@
  *  SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
-#ifndef XRANDRX11HELPER_H
-#define XRANDRX11HELPER_H
+#pragma once
 
 #include <QAbstractNativeEventFilter>
 #include <QLoggingCategory>
 #include <QObject>
 #include <QRect>
 
-#include "xcbwrapper.h"
+#include <xcb/randr.h>
+#include <xcb/xcb.h>
 
 class XCBEventListener : public QObject, public QAbstractNativeEventFilter
 {
@@ -22,7 +22,7 @@ public:
     XCBEventListener();
     ~XCBEventListener() override;
 
-    bool nativeEventFilter(const QByteArray &eventType, void *message, long int *result) override;
+    bool nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result) override;
 
 Q_SIGNALS:
     /* Emitted when only XRandR 1.1 or older is available */
@@ -30,7 +30,7 @@ Q_SIGNALS:
     void outputsChanged();
 
     /* Emitted only when XRandR 1.2 or newer is available */
-    void crtcChanged(xcb_randr_crtc_t crtc, xcb_randr_mode_t mode, xcb_randr_rotation_t rotation, const QRect &geom);
+    void crtcChanged(xcb_randr_crtc_t crtc, xcb_randr_mode_t mode, xcb_randr_rotation_t rotation, const QRect &geom, xcb_timestamp_t timestamp);
     void outputChanged(xcb_randr_output_t output, xcb_randr_crtc_t crtc, xcb_randr_mode_t mode, xcb_randr_connection_t connection);
     void outputPropertyChanged(xcb_randr_output_t output);
 
@@ -53,4 +53,3 @@ protected:
 };
 
 Q_DECLARE_LOGGING_CATEGORY(KSCREEN_XCB_HELPER)
-#endif // XRANDRX11HELPER_H

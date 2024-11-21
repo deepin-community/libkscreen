@@ -4,11 +4,9 @@
  *  SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
-#ifndef KSCREEN_LOG_H
-#define KSCREEN_LOG_H
+#pragma once
 
 #include "kscreen_export.h"
-#include "types.h"
 
 #include <QLoggingCategory>
 #include <QObject>
@@ -100,5 +98,3 @@ private:
 };
 
 } // KSCreen namespace
-
-#endif // KSCREEN_LOG_H

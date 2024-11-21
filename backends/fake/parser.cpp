@@ -8,7 +8,9 @@
 #include "fake.h"
 
 #include "config.h"
+#include "mode.h"
 #include "output.h"
+#include "screen.h"
 
 #include <QFile>
 #include <QJsonArray>
@@ -177,11 +179,28 @@ OutputPtr Parser::outputFromJson(QMap<QString, QVariant> map)
         map.remove(QStringLiteral("size"));
     }
 
+    // This is not supported in real configs; only set this value in fake test
+    // configs and don't add logic to kscreen to set this data in real configs.
+    if (map.contains(QStringLiteral("sizeMM"))) {
+        output->setSizeMm(Parser::sizeFromJson(map[QStringLiteral("sizeMM")].toMap()));
+        map.remove(QStringLiteral("sizeMM"));
+    }
+
     auto scale = QStringLiteral("scale");
     if (map.contains(scale)) {
         qDebug() << "Scale found:" << map[scale].toReal();
         output->setScale(map[scale].toReal());
         map.remove(scale);
+    }
+
+    // the deprecated "primary" property may exist for compatibility, but "priority" should override it whenever present.
+    if (map.contains(QStringLiteral("primary"))) {
+        output->setPriority(map[QStringLiteral("primary")].toBool() ? 1 : 2);
+        map.remove(QStringLiteral("primary"));
+    }
+    if (map.contains(QStringLiteral("priority"))) {
+        output->setPriority(map[QStringLiteral("priority")].toUInt());
+        map.remove(QStringLiteral("priority"));
     }
 
     // Remove some extra properties that we do not want or need special treatment

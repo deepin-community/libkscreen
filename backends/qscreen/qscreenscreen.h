@@ -4,11 +4,10 @@
  *  SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
-#ifndef QSCREEN_SCREEN_H
-#define QSCREEN_SCREEN_H
+#pragma once
 
-#include "config.h"
-#include "screen.h"
+#include "qscreenconfig.h"
+#include "types.h"
 
 #include <QLoggingCategory>
 #include <QScreen>
@@ -31,5 +30,3 @@ public:
 };
 
 } // namespace
-
-#endif // QSCREEN_SCREEN_H

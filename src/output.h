@@ -5,11 +5,9 @@
  *  SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
-#ifndef OUTPUT_CONFIG_H
-#define OUTPUT_CONFIG_H
+#pragma once
 
 #include "kscreen_export.h"
-#include "mode.h"
 #include "types.h"
 
 #include <QDebug>
@@ -18,10 +16,12 @@
 #include <QPoint>
 #include <QSize>
 #include <QStringList>
+#include <optional>
 
 namespace KScreen
 {
 class Edid;
+class Mode;
 
 class KSCREEN_EXPORT Output : public QObject
 {
@@ -40,18 +40,26 @@ public:
     Q_PROPERTY(QString preferredModeId READ preferredModeId CONSTANT)
     Q_PROPERTY(bool connected READ isConnected WRITE setConnected NOTIFY isConnectedChanged)
     Q_PROPERTY(bool enabled READ isEnabled WRITE setEnabled NOTIFY isEnabledChanged)
-    Q_PROPERTY(bool primary READ isPrimary WRITE setPrimary NOTIFY isPrimaryChanged)
+    Q_PROPERTY(bool primary READ isPrimary WRITE setPrimary NOTIFY priorityChanged)
+    Q_PROPERTY(uint32_t priority READ priority WRITE setPriority NOTIFY priorityChanged)
     Q_PROPERTY(QList<int> clones READ clones WRITE setClones NOTIFY clonesChanged)
     Q_PROPERTY(int replicationSource READ replicationSource WRITE setReplicationSource NOTIFY replicationSourceChanged)
     Q_PROPERTY(KScreen::Edid *edid READ edid CONSTANT)
     Q_PROPERTY(QSize sizeMm READ sizeMm CONSTANT)
     Q_PROPERTY(qreal scale READ scale WRITE setScale NOTIFY scaleChanged)
     Q_PROPERTY(bool followPreferredMode READ followPreferredMode WRITE setFollowPreferredMode NOTIFY followPreferredModeChanged)
-    Q_PROPERTY(QSizeF logicalSize READ logicalSize WRITE setLogicalSize NOTIFY logicalSizeChanged)
+    Q_PROPERTY(QSizeF explicitLogicalSize READ explicitLogicalSize WRITE setExplicitLogicalSize NOTIFY explicitLogicalSizeChanged)
     Q_PROPERTY(Capabilities capabilities READ capabilities NOTIFY capabilitiesChanged)
     Q_PROPERTY(uint32_t overscan READ overscan WRITE setOverscan NOTIFY overscanChanged)
     Q_PROPERTY(VrrPolicy vrrPolicy READ vrrPolicy WRITE setVrrPolicy NOTIFY vrrPolicyChanged)
     Q_PROPERTY(RgbRange rgbRange READ rgbRange WRITE setRgbRange NOTIFY rgbRangeChanged)
+    Q_PROPERTY(bool hdrEnabled READ isHdrEnabled WRITE setHdrEnabled NOTIFY hdrEnabledChanged)
+    Q_PROPERTY(uint32_t sdrBrightness READ sdrBrightness WRITE setSdrBrightness NOTIFY sdrBrightnessChanged)
+    Q_PROPERTY(bool wcgEnabled READ isWcgEnabled WRITE setWcgEnabled NOTIFY wcgEnabledChanged)
+    Q_PROPERTY(AutoRotatePolicy autoRotatePolicy READ autoRotatePolicy WRITE setAutoRotatePolicy NOTIFY autoRotatePolicyChanged)
+    Q_PROPERTY(QString iccProfilePath READ iccProfilePath WRITE setIccProfilePath NOTIFY iccProfilePathChanged)
+    Q_PROPERTY(ColorProfileSource colorProfileSource READ colorProfileSource WRITE setColorProfileSource NOTIFY colorProfileSourceChanged)
+    Q_PROPERTY(double brightness READ brightness WRITE setBrightness NOTIFY brightnessChanged)
 
     enum Type {
         Unknown,
@@ -73,17 +81,26 @@ public:
     Q_ENUM(Type)
 
     enum Rotation {
-        None = 1,
-        Left = 2,
-        Inverted = 4,
-        Right = 8,
+        None = 1 << 0,
+        Left = 1 << 1,
+        Inverted = 1 << 2,
+        Right = 1 << 3,
+        Flipped = 1 << 4,
+        Flipped90 = 1 << 5,
+        Flipped180 = 1 << 6,
+        Flipped270 = 1 << 7,
     };
     Q_ENUM(Rotation)
 
     enum class Capability {
-        Overscan = 0x1,
-        Vrr = 0x2,
-        RgbRange = 0x4,
+        Overscan = 1 << 0,
+        Vrr = 1 << 1,
+        RgbRange = 1 << 2,
+        HighDynamicRange = 1 << 3,
+        WideColorGamut = 1 << 4,
+        AutoRotation = 1 << 5,
+        IccProfile = 1 << 6,
+        BrightnessControl = 1 << 7,
     };
     Q_ENUM(Capability)
     Q_DECLARE_FLAGS(Capabilities, Capability)
@@ -102,6 +119,20 @@ public:
         Limited = 2,
     };
     Q_ENUM(RgbRange)
+
+    enum class AutoRotatePolicy {
+        Never = 0,
+        InTabletMode = 1,
+        Always = 2,
+    };
+    Q_ENUM(AutoRotatePolicy)
+
+    enum class ColorProfileSource {
+        sRGB = 0,
+        ICC = 1,
+        EDID = 2,
+    };
+    Q_ENUM(ColorProfileSource)
 
     explicit Output();
     ~Output() override;
@@ -139,6 +170,7 @@ public:
     QString hashMd5() const;
 
     Type type() const;
+    QString typeName() const;
     void setType(Type type);
 
     QString icon() const;
@@ -203,7 +235,7 @@ public:
      */
     Q_INVOKABLE inline bool isHorizontal() const
     {
-        return ((rotation() == Output::None) || (rotation() == Output::Inverted));
+        return rotation() == Output::None || rotation() == Output::Inverted || rotation() == Output::Flipped || rotation() == Output::Flipped180;
     }
 
     bool isConnected() const;
@@ -215,10 +247,13 @@ public:
     bool isPrimary() const;
     void setPrimary(bool primary);
 
+    uint32_t priority() const;
+    void setPriority(uint32_t priority);
+
     /**
      * @brief Immutable clones because of hardware restrictions
      *
-     * Clones are set symmetcally on all outputs. The list contains ids
+     * Clones are set symmetrically on all outputs. The list contains ids
      * for all other outputs being clones of this output.
      *
      * @return List of output ids being clones of each other.
@@ -314,21 +349,22 @@ public:
      * The logical size is the output's representation internal to the display server and its
      * overall screen geometry.
      *
-     * returns the logical size of this output
-     *
-     * @since 5.18
-     */
-    QSizeF logicalSize() const;
-
-    /**
-     * The logical size is the output's representation internal to the display server and its
-     * overall screen geometry.
-     *
      * returns the explicitly set logical size of this output, is an invalid size if not set
      *
      * @since 5.18
      */
     QSizeF explicitLogicalSize() const;
+
+    /**
+     * The logical size is the output's representation internal to the display
+     * server and its overall screen geometry.
+     *
+     * returns the logical size of this output, rounded up to the next integer;
+     * is an invalid size if not set
+     *
+     * @since 6.0
+     */
+    QSize explicitLogicalSizeInt() const;
 
     /**
      * Specifies explicitly the logical size of this output and by that overrides any other
@@ -337,9 +373,9 @@ public:
      *
      * @param size of this output in logical space
      *
-     * @since 5.18
+     * @since 5.24
      */
-    void setLogicalSize(const QSizeF &size);
+    void setExplicitLogicalSize(const QSizeF &size);
 
     /**
      * @returns whether the mode should be changed to the new preferred mode
@@ -407,7 +443,92 @@ public:
      */
     void setRgbRange(RgbRange rgbRange);
 
+    /**
+     * @returns if high dynamic range is enabled
+     * @since 6.0
+     */
+    bool isHdrEnabled() const;
+
+    /**
+     * Set if high dynamic range should be enabled
+     * @since 6.0
+     */
+    void setHdrEnabled(bool enable);
+
+    /**
+     * @returns the brightness for SDR content while the output is in HDR mode
+     * @since 6.0
+     */
+    uint32_t sdrBrightness() const;
+
+    /**
+     * Set the brightness for SDR content while the output is in HDR mode
+     * @since 6.0
+     */
+    void setSdrBrightness(uint32_t brightness);
+
+    /**
+     * @returns if the use of wide color gamut is enabled
+     * @since 6.0
+     */
+    bool isWcgEnabled() const;
+
+    /**
+     * Set if a wide color gamut should be used
+     * @since 6.0
+     */
+    void setWcgEnabled(bool enable);
+
+    /**
+     * @returns the policy for auto rotation
+     * @since 6.0
+     */
+    AutoRotatePolicy autoRotatePolicy() const;
+
+    /**
+     * Set the policy for auto rotation
+     * @since 6.0
+     */
+    void setAutoRotatePolicy(AutoRotatePolicy policy);
+
+    /**
+     * @since 6.0
+     */
+    QString iccProfilePath() const;
+    /**
+     * @since 6.0
+     */
+    void setIccProfilePath(const QString &path);
+
+    double sdrGamutWideness() const;
+    void setSdrGamutWideness(double value);
+
+    double maxPeakBrightness() const;
+    void setMaxPeakBrightness(double value);
+
+    double maxAverageBrightness() const;
+    void setMaxAverageBrightness(double value);
+
+    double minBrightness() const;
+    void setMinBrightness(double value);
+
+    std::optional<double> maxPeakBrightnessOverride() const;
+    void setMaxPeakBrightnessOverride(std::optional<double> value);
+
+    std::optional<double> maxAverageBrightnessOverride() const;
+    void setMaxAverageBrightnessOverride(std::optional<double> value);
+
+    std::optional<double> minBrightnessOverride() const;
+    void setMinBrightnessOverride(std::optional<double> value);
+
+    ColorProfileSource colorProfileSource() const;
+    void setColorProfileSource(ColorProfileSource source);
+
+    double brightness() const;
+    void setBrightness(double brightness);
+
     void apply(const OutputPtr &other);
+
 Q_SIGNALS:
     void outputChanged();
     void posChanged();
@@ -416,16 +537,30 @@ Q_SIGNALS:
     void rotationChanged();
     void isConnectedChanged();
     void isEnabledChanged();
-    void isPrimaryChanged();
+    void priorityChanged();
     void clonesChanged();
     void replicationSourceChanged();
     void scaleChanged();
-    void logicalSizeChanged();
+    void explicitLogicalSizeChanged();
     void followPreferredModeChanged(bool followPreferredMode);
     void capabilitiesChanged();
     void overscanChanged();
     void vrrPolicyChanged();
     void rgbRangeChanged();
+    void hdrEnabledChanged();
+    void sdrBrightnessChanged();
+    void wcgEnabledChanged();
+    void autoRotatePolicyChanged();
+    void iccProfilePathChanged();
+    void sdrGamutWidenessChanged();
+    void maxPeakBrightnessChanged();
+    void maxAverageBrightnessChanged();
+    void minBrightnessChanged();
+    void maxPeakBrightnessOverrideChanged();
+    void maxAverageBrightnessOverrideChanged();
+    void minBrightnessOverrideChanged();
+    void colorProfileSourceChanged();
+    void brightnessChanged();
 
     /** The mode list changed.
      *
@@ -441,15 +576,9 @@ private:
     class Private;
     Private *const d;
 
-    Output(Private *dd);
+    explicit Output(Private *dd);
 };
 
 } // KScreen namespace
 
 KSCREEN_EXPORT QDebug operator<<(QDebug dbg, const KScreen::OutputPtr &output);
-
-Q_DECLARE_METATYPE(KScreen::OutputList)
-Q_DECLARE_METATYPE(KScreen::Output::Rotation)
-Q_DECLARE_METATYPE(KScreen::Output::Type)
-
-#endif // OUTPUT_H

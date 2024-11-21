@@ -1,3 +1,333 @@
+libkscreen (4:6.2.1-1) experimental; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (6.2.1).
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Tue, 15 Oct 2024 17:47:33 +0200
+
+libkscreen (4:6.2.0-1) experimental; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (6.1.90).
+  * Update build-deps and deps with the info from cmake.
+  * Refresh patches.
+  * Update symbols from build for 6.1.90.
+  * New upstream release (6.2.0).
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Sat, 05 Oct 2024 23:17:42 +0200
+
+libkscreen (4:6.1.5-1) experimental; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (6.1.5).
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Wed, 11 Sep 2024 23:27:42 +0200
+
+libkscreen (4:6.1.4-1) experimental; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (6.1.4).
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Sun, 11 Aug 2024 23:58:19 +0200
+
+libkscreen (4:6.1.3-1) experimental; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (6.1.3).
+  * Update build-deps and deps with the info from cmake.
+  * Rename non-library binary packages from libkf6screen-* to libkscreen-* to
+    make it consistent and explicit that it’s not part of KF6.
+  * Rewrite patch to make Wayland optional.
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Sun, 21 Jul 2024 23:46:14 +0200
+
+libkscreen (4:6.1.0-2) experimental; urgency=medium
+
+  [ Patrick Franz ]
+  * Add missing Breaks+Replaces for libkf6screen-bin against
+    libkf5screen-bin (Closes: #1074071).
+
+ -- Patrick Franz <deltaone@debian.org>  Sun, 23 Jun 2024 00:12:34 +0200
+
+libkscreen (4:6.1.0-1) experimental; urgency=medium
+
+  [ Patrick Franz ]
+  * New upstream release (6.1.0).
+  * Disable patches.
+  * Update build-deps and deps with the info from cmake.
+  * Create new packages.
+  * Update d/copyright.
+
+ -- Patrick Franz <deltaone@debian.org>  Thu, 20 Jun 2024 21:35:56 +0200
+
+libkscreen (4:5.27.11-1) unstable; urgency=medium
+
+  [ Patrick Franz ]
+  * Bump Standards-Version to 4.7.0 (No changes needed).
+  * New upstream release (5.27.11).
+
+ -- Patrick Franz <deltaone@debian.org>  Sun, 19 May 2024 12:18:02 +0200
+
+libkscreen (4:5.27.10-1) unstable; urgency=medium
+
+  [ Patrick Franz ]
+  * New upstream release (5.27.10).
+
+ -- Patrick Franz <deltaone@debian.org>  Thu, 11 Jan 2024 23:17:01 +0100
+
+libkscreen (4:5.27.9-1) unstable; urgency=medium
+
+  [ Patrick Franz ]
+  * New upstream release (5.27.9).
+
+ -- Patrick Franz <deltaone@debian.org>  Fri, 27 Oct 2023 21:52:08 +0200
+
+libkscreen (4:5.27.8-1) unstable; urgency=medium
+
+  [ Patrick Franz ]
+  * New upstream release (5.27.8).
+
+ -- Patrick Franz <deltaone@debian.org>  Wed, 13 Sep 2023 20:46:48 +0200
+
+libkscreen (4:5.27.7-1) unstable; urgency=medium
+
+  [ Patrick Franz ]
+  * New upstream release (5.27.7).
+
+ -- Patrick Franz <deltaone@debian.org>  Thu, 03 Aug 2023 18:49:54 +0200
+
+libkscreen (4:5.27.5-2) unstable; urgency=medium
+
+  * Release to unstable.
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Sat, 27 May 2023 18:23:41 +0200
+
+libkscreen (4:5.27.5-1) experimental; urgency=medium
+
+  [ Patrick Franz ]
+  * New upstream release (5.27.5).
+
+ -- Patrick Franz <deltaone@debian.org>  Tue, 09 May 2023 23:25:49 +0200
+
+libkscreen (4:5.27.3-1) experimental; urgency=medium
+
+  [ Patrick Franz ]
+  * New upstream release (5.27.3).
+
+ -- Patrick Franz <deltaone@debian.org>  Wed, 22 Mar 2023 23:14:45 +0100
+
+libkscreen (4:5.27.2-1) unstable; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (5.27.1).
+  * New upstream release (5.27.2).
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Tue, 28 Feb 2023 14:59:29 +0100
+
+libkscreen (4:5.27.0-1) unstable; urgency=medium
+
+  * Add patch to support building with a version of the C++ standard
+    lower than c++17 (thanks Sune Vuorela).
+  * Add patch to restore a transitive include fixing FTBFS in downstream
+    packages (thanks Sune Vuorela).
+  * New upstream release (5.27.0).
+  * Update build-deps and deps with the info from cmake.
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Sat, 18 Feb 2023 17:08:38 +0100
+
+libkscreen (4:5.26.90-2) unstable; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * Release to unstable.
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Mon, 23 Jan 2023 21:50:53 +0100
+
+libkscreen (4:5.26.90-1) experimental; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (5.26.90).
+  * Update build-deps and deps with the info from cmake.
+  * Refresh patch Make-kwayland-optional.patch.
+  * Bump Standards-Version to 4.6.2, no change required.
+  * Bump soname of libkf5screen to 8.
+  * Add libkf5screendpms8 library package.
+  * Update the list of installed files from build logs.
+  * Update symbols from build for 5.26.90.
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Sun, 22 Jan 2023 01:38:34 +0100
+
+libkscreen (4:5.26.5-1) unstable; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (5.26.5).
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Sat, 07 Jan 2023 00:20:38 +0100
+
+libkscreen (4:5.26.4-1) unstable; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (5.26.4).
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Tue, 29 Nov 2022 16:00:04 +0100
+
+libkscreen (4:5.26.3-1) unstable; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (5.26.3).
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Tue, 08 Nov 2022 15:42:56 +0100
+
+libkscreen (4:5.26.2-2) unstable; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * Release to unstable.
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Thu, 03 Nov 2022 00:49:57 +0100
+
+libkscreen (4:5.26.2-1) experimental; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (5.26.1).
+  * New upstream release (5.26.2).
+  * Update build-deps and deps with the info from cmake.
+  * Add libkf5screen-data package for the localization files.
+  * Review copyright information.
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Tue, 01 Nov 2022 22:15:00 +0100
+
+libkscreen (4:5.26.0-1) unstable; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (5.26.0).
+  * Release to unstable.
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Tue, 11 Oct 2022 15:44:01 +0200
+
+libkscreen (4:5.25.90-1) experimental; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (5.25.90).
+  * Update build-deps and deps with the info from cmake.
+  * Refresh patch Make-kwayland-optional.patch.
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Sun, 25 Sep 2022 00:14:21 +0200
+
+libkscreen (4:5.25.5-1) unstable; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (5.25.5).
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Mon, 19 Sep 2022 20:14:02 +0200
+
+libkscreen (4:5.25.4-2) unstable; urgency=medium
+
+  * Team upload.
+  * Remove inactive Uploaders.
+  * rules: switch from "egrep" to "grep -E", as the former has been deprecated
+    for many years.
+  * Modernize building:
+    - add the dh-sequence-kf5 build dependency to use the kf5 addon
+      automatically
+    - drop all the manually specified addons and buildsystem for dh
+  * copyright: remove extra empty line at the beginning of the file.
+  * Restrict the qtwayland5-dev-tools build dependency as linux-any, as done
+    for the other Wayland-related build dependencies.
+
+ -- Pino Toscano <pino@debian.org>  Sat, 10 Sep 2022 09:06:39 +0200
+
+libkscreen (4:5.25.4-1) unstable; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (5.25.4).
+  * Refresh lintian overrides.
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Tue, 02 Aug 2022 17:31:00 +0200
+
+libkscreen (4:5.25.3-1) unstable; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (5.25.2).
+  * Refresh lintian overrides.
+  * New upstream release (5.25.3).
+  * Release to unstable
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Sun, 17 Jul 2022 15:26:34 +0200
+
+libkscreen (4:5.25.1-1) experimental; urgency=medium
+
+  [ Patrick Franz ]
+  * New upstream release (5.25.1).
+
+ -- Patrick Franz <deltaone@debian.org>  Tue, 21 Jun 2022 21:45:09 +0200
+
+libkscreen (4:5.25.0-1) experimental; urgency=medium
+
+  * New upstream release (5.25.0).
+  * Bump Standards-Version to 4.6.1, no change required.
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Tue, 14 Jun 2022 21:26:13 +0200
+
+libkscreen (4:5.24.90-1) experimental; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (5.24.90).
+  * Refresh patch Make-kwayland-optional.patch.
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Fri, 20 May 2022 11:33:25 +0200
+
+libkscreen (4:5.24.5-1) unstable; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (5.24.5).
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Thu, 12 May 2022 21:39:20 +0200
+
+libkscreen (4:5.24.4-1) unstable; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (5.24.4).
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Wed, 30 Mar 2022 13:44:44 +0200
+
+libkscreen (4:5.24.3-1) unstable; urgency=medium
+
+  [ Aurélien COUDERC ]
+  * New upstream release (5.24.3).
+  * Added myself to the uploaders.
+
+ -- Aurélien COUDERC <coucouf@debian.org>  Thu, 10 Mar 2022 07:46:09 +0100
+
+libkscreen (4:5.24.2-1) unstable; urgency=medium
+
+  [ Patrick Franz ]
+  * New upstream release (5.24.2).
+  * Bump Standards-Version to 4.6.0 (no changes needed).
+  * Re-export signing key without extra signatures.
+  * Update B-Ds and deps with the info from cmake.
+  * Update patches.
+  * Remove autopkgtest.
+  * Update list of installed files.
+  * Update symbols from buildlogs.
+
+ -- Patrick Franz <deltaone@debian.org>  Sat, 26 Feb 2022 21:59:01 +0100
+
+libkscreen (4:5.23.5-1) unstable; urgency=medium
+
+  [ Patrick Franz ]
+  * New upstream release (5.23.5).
+
+ -- Patrick Franz <deltaone@debian.org>  Fri, 07 Jan 2022 15:44:24 +0100
+
+libkscreen (4:5.23.4-1) unstable; urgency=medium
+
+  [ Norbert Preining ]
+  * New upstream release (5.23.4).
+
+  [ Patrick Franz ]
+  * Update symbols from buildlog.
+
+ -- Patrick Franz <deltaone@debian.org>  Thu, 02 Dec 2021 21:44:14 +0100
+
 libkscreen (4:5.23.3-1) unstable; urgency=medium
 
   [ Norbert Preining ]

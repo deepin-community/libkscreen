@@ -3,8 +3,7 @@
  *
  *  SPDX-License-Identifier: LGPL-2.1-or-later
  */
-#ifndef WAYLANDOUTPUTDEVICEMODE_H
-#define WAYLANDOUTPUTDEVICEMODE_H
+#pragma once
 
 #include "qwayland-kde-output-device-v2.h"
 
@@ -22,11 +21,10 @@ public:
 
     ~WaylandOutputDeviceMode() override;
 
-    int refreshRate() const;
+    QString id() const;
+    float refreshRate() const;
     QSize size() const;
     bool preferred() const;
-
-    bool operator==(const WaylandOutputDeviceMode &other);
 
     static WaylandOutputDeviceMode *get(struct ::kde_output_device_mode_v2 *object);
 
@@ -40,11 +38,10 @@ protected:
     void kde_output_device_mode_v2_removed() override;
 
 private:
-    int m_refreshRate = 60000;
+    QString m_id;
+    float m_refreshRate = 60.0;
     QSize m_size;
     bool m_preferred = false;
 };
 
 }
-
-#endif // WAYLANDOUTPUTDEVICEMODE_H

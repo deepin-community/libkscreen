@@ -7,8 +7,15 @@
 
 using namespace KScreen;
 
+static QString nextId()
+{
+    static uint id = 1;
+    return QString::number(id++);
+}
+
 WaylandOutputDeviceMode::WaylandOutputDeviceMode(struct ::kde_output_device_mode_v2 *object)
     : QtWayland::kde_output_device_mode_v2(object)
+    , m_id(nextId())
 {
 }
 
@@ -24,7 +31,7 @@ void WaylandOutputDeviceMode::kde_output_device_mode_v2_size(int32_t width, int3
 
 void WaylandOutputDeviceMode::kde_output_device_mode_v2_refresh(int32_t refresh)
 {
-    m_refreshRate = refresh;
+    m_refreshRate = refresh / 1000.0;
 }
 
 void WaylandOutputDeviceMode::kde_output_device_mode_v2_preferred()
@@ -37,7 +44,12 @@ void WaylandOutputDeviceMode::kde_output_device_mode_v2_removed()
     Q_EMIT removed();
 }
 
-int WaylandOutputDeviceMode::refreshRate() const
+QString WaylandOutputDeviceMode::id() const
+{
+    return m_id;
+}
+
+float WaylandOutputDeviceMode::refreshRate() const
 {
     return m_refreshRate;
 }
@@ -52,13 +64,10 @@ bool WaylandOutputDeviceMode::preferred() const
     return m_preferred;
 }
 
-bool WaylandOutputDeviceMode::operator==(const WaylandOutputDeviceMode &other)
-{
-    return m_size == other.m_size && m_refreshRate == other.m_refreshRate && m_preferred == other.m_preferred;
-}
-
 WaylandOutputDeviceMode *WaylandOutputDeviceMode::get(struct ::kde_output_device_mode_v2 *object)
 {
     auto mode = QtWayland::kde_output_device_mode_v2::fromObject(object);
     return static_cast<WaylandOutputDeviceMode *>(mode);
 }
+
+#include "moc_waylandoutputdevicemode.cpp"

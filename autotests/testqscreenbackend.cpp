@@ -6,8 +6,11 @@
  */
 
 #include <QElapsedTimer>
+#include <QLoggingCategory>
 #include <QObject>
-#include <QtTest>
+#include <QTest>
+
+#include <cstdint>
 
 #include "../src/backendmanager_p.h"
 #include "../src/config.h"
@@ -15,6 +18,7 @@
 #include "../src/getconfigoperation.h"
 #include "../src/mode.h"
 #include "../src/output.h"
+#include "../src/screen.h"
 
 Q_LOGGING_CATEGORY(KSCREEN_QSCREEN, "kscreen.qscreen")
 
@@ -159,7 +163,7 @@ void testQScreenBackend::commonUsagePattern()
 
         QVariantMap info;
         info[QStringLiteral("id")] = output->id();
-        info[QStringLiteral("primary")] = output->isPrimary();
+        info[QStringLiteral("priority")] = output->priority();
         info[QStringLiteral("enabled")] = output->isEnabled();
         info[QStringLiteral("rotation")] = output->rotation();
 

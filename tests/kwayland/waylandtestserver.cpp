@@ -15,6 +15,8 @@
 #include <QLoggingCategory>
 #include <QStandardPaths>
 
+#include <utility>
+
 #include "../src/edid.h"
 
 Q_LOGGING_CATEGORY(KSCREEN_WAYLAND_TESTSERVER, "kscreen.kwayland.testserver")
@@ -132,8 +134,8 @@ void WaylandTestServer::configurationChangeRequested(KWayland::Server::OutputCon
             outputdevice->setGlobalPosition(c->position());
         }
         if (c->scaleChanged()) {
-            qCDebug(KSCREEN_WAYLAND_TESTSERVER) << "Setting scale:" << c->scale();
-            outputdevice->setScale(c->scale());
+            qCDebug(KSCREEN_WAYLAND_TESTSERVER) << "Setting scale:" << c->scaleF();
+            outputdevice->setScaleF(c->scaleF());
         }
     }
 
@@ -151,7 +153,7 @@ void WaylandTestServer::configurationChangeRequested(KWayland::Server::OutputCon
 void WaylandTestServer::showOutputs()
 {
     qCDebug(KSCREEN_WAYLAND_TESTSERVER) << "******** Wayland server running: " << m_outputs.count() << " outputs. ********";
-    for (const auto &o : qAsConst(m_outputs)) {
+    for (const auto &o : std::as_const(m_outputs)) {
         bool enabled = (o->enabled() == KWayland::Server::OutputDeviceInterface::Enablement::Enabled);
         qCDebug(KSCREEN_WAYLAND_TESTSERVER) << "  * Output id: " << o->uuid();
         qCDebug(KSCREEN_WAYLAND_TESTSERVER) << "      Enabled: " << (enabled ? "enabled" : "disabled");
@@ -182,3 +184,5 @@ QString WaylandTestServer::modeString(KWayland::Server::OutputDeviceInterface *o
     }
     return QStringLiteral("[%1] %2 (%4 modes: %3)").arg(QString::number(mid), s, ids, QString::number(outputdevice->modes().count()));
 }
+
+#include "moc_waylandtestserver.cpp"

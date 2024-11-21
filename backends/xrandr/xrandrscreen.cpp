@@ -6,12 +6,14 @@
  */
 #include "xrandrscreen.h"
 
-#include "../xcbwrapper.h"
-#include "config.h"
-#include "screen.h"
+#include "xrandr.h"
 #include "xrandrconfig.h"
 
-#include <QX11Info>
+#include "../xcbwrapper.h"
+
+#include "screen.h"
+
+#include <QtGui/private/qtx11extras_p.h>
 
 XRandRScreen::XRandRScreen(XRandRConfig *config)
     : QObject(config)
@@ -28,7 +30,9 @@ XRandRScreen::~XRandRScreen()
 
 void XRandRScreen::update()
 {
-    xcb_screen_t *screen = XCB::screenOfDisplay(XCB::connection(), QX11Info::appScreen());
+    const int appScreen = QX11Info::appScreen();
+    m_id = appScreen;
+    xcb_screen_t *screen = XCB::screenOfDisplay(XCB::connection(), appScreen);
     m_currentSize = QSize(screen->width_in_pixels, screen->height_in_pixels);
 }
 
@@ -60,3 +64,5 @@ void XRandRScreen::updateKScreenScreen(KScreen::ScreenPtr &screen) const
 {
     screen->setCurrentSize(m_currentSize);
 }
+
+#include "moc_xrandrscreen.cpp"

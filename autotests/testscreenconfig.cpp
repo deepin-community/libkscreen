@@ -5,7 +5,7 @@
  */
 
 #include <QObject>
-#include <QtTest>
+#include <QTest>
 
 #include "../src/backendmanager_p.h"
 #include "../src/config.h"
@@ -66,7 +66,9 @@ void testScreenConfig::cleanupTestCase()
 void testScreenConfig::singleOutput()
 {
     // json file for the fake backend
-    qputenv("KSCREEN_BACKEND_ARGS", "TEST_DATA=" TEST_DATA "singleoutput.json");
+    KScreen::BackendManager::instance()->setBackendArgs(
+        {{QStringLiteral("TEST_DATA"), TEST_DATA "singleoutput.json"},
+         {QStringLiteral("SUPPORTED_FEATURES"), QVariant::fromValue(KScreen::Config::Feature::PerOutputScaling)}});
 
     //     QVERIFY2(kscreen, KScreen::errorString().toLatin1());
 
@@ -108,7 +110,7 @@ void testScreenConfig::singleOutput()
 
 void testScreenConfig::singleOutputWithoutPreferred()
 {
-    qputenv("KSCREEN_BACKEND_ARGS", "TEST_DATA=" TEST_DATA "singleOutputWithoutPreferred.json");
+    KScreen::BackendManager::instance()->setBackendArgs({{QStringLiteral("TEST_DATA"), TEST_DATA "singleOutputWithoutPreferred.json"}});
 
     const ConfigPtr config = getConfig();
     QVERIFY(!config.isNull());
@@ -121,7 +123,9 @@ void testScreenConfig::singleOutputWithoutPreferred()
 
 void testScreenConfig::multiOutput()
 {
-    qputenv("KSCREEN_BACKEND_ARGS", "TEST_DATA=" TEST_DATA "multipleoutput.json");
+    KScreen::BackendManager::instance()->setBackendArgs(
+        {{QStringLiteral("TEST_DATA"), TEST_DATA "multipleoutput.json"},
+         {QStringLiteral("SUPPORTED_FEATURES"), QVariant::fromValue(KScreen::Config::Feature::PerOutputScaling)}});
 
     const ConfigPtr config = getConfig();
     QVERIFY(!config.isNull());
@@ -141,7 +145,7 @@ void testScreenConfig::multiOutput()
     QCOMPARE(output->type(), Output::HDMI);
     QCOMPARE(output->modes().count(), 4);
     QCOMPARE(output->pos(), QPoint(1280, 0));
-    QCOMPARE(output->geometry(), QRect(1280, 0, 1920 / 1.4, 1080 / 1.4));
+    QCOMPARE(output->geometry(), QRect(1280, 0, std::ceil(1920 / 1.4), std::ceil(1080 / 1.4)));
     QCOMPARE(output->currentModeId(), QLatin1String("4"));
     QCOMPARE(output->preferredModeId(), QLatin1String("4"));
     QCOMPARE(output->rotation(), Output::None);
@@ -159,7 +163,7 @@ void testScreenConfig::multiOutput()
 
 void testScreenConfig::clonesOutput()
 {
-    qputenv("KSCREEN_BACKEND_ARGS", "TEST_DATA=" TEST_DATA "multipleclone.json");
+    KScreen::BackendManager::instance()->setBackendArgs({{QStringLiteral("TEST_DATA"), TEST_DATA "multipleclone.json"}});
 
     const ConfigPtr config = getConfig();
     QVERIFY(!config.isNull());
@@ -181,10 +185,12 @@ void testScreenConfig::clonesOutput()
 
 void testScreenConfig::configCanBeApplied()
 {
-    qputenv("KSCREEN_BACKEND_ARGS", "TEST_DATA=" TEST_DATA "singleoutputBroken.json");
+    KScreen::BackendManager::instance()->setBackendArgs({{QStringLiteral("TEST_DATA"), TEST_DATA "singleoutputBroken.json"}});
+
     const ConfigPtr brokenConfig = getConfig();
 
-    qputenv("KSCREEN_BACKEND_ARGS", "TEST_DATA=" TEST_DATA "singleoutput.json");
+    KScreen::BackendManager::instance()->setBackendArgs({{QStringLiteral("TEST_DATA"), TEST_DATA "singleoutput.json"}});
+
     const ConfigPtr currentConfig = getConfig();
     QVERIFY(!currentConfig.isNull());
     const OutputPtr primaryBroken = brokenConfig->outputs()[2];
@@ -206,7 +212,8 @@ void testScreenConfig::configCanBeApplied()
     qDebug() << "brokenConfig.modes" << primaryBroken->mode(QStringLiteral("3"));
     QVERIFY(Config::canBeApplied(brokenConfig));
 
-    qputenv("KSCREEN_BACKEND_ARGS", "TEST_DATA=" TEST_DATA "tooManyOutputs.json");
+    KScreen::BackendManager::instance()->setBackendArgs({{QStringLiteral("TEST_DATA"), TEST_DATA "tooManyOutputs.json"}});
+
     const ConfigPtr brokenConfig2 = getConfig();
     QVERIFY(!brokenConfig2.isNull());
 
@@ -266,7 +273,7 @@ void testScreenConfig::testInvalidMode()
 
 void testScreenConfig::testOutputPositionNormalization()
 {
-    qputenv("KSCREEN_BACKEND_ARGS", "TEST_DATA=" TEST_DATA "multipleoutput.json");
+    KScreen::BackendManager::instance()->setBackendArgs({{QStringLiteral("TEST_DATA"), TEST_DATA "multipleoutput.json"}});
 
     const ConfigPtr config = getConfig();
     QVERIFY(!config.isNull());

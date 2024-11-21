@@ -8,6 +8,8 @@ ecm_qt_declare_logging_category(backendlauncher_SRCS
                                 HEADER kscreen_backendLauncher_debug.h
                                 IDENTIFIER KSCREEN_BACKEND_LAUNCHER
                                 CATEGORY_NAME org.kde.kscreen.backendLauncher
+				DESCRIPTION "Screen backend launcher"
+				EXPORT KSCREEN
 )
 
 qt_add_dbus_adaptor(backendlauncher_SRCS ${CMAKE_SOURCE_DIR}/interfaces/org.kde.KScreen.Backend.xml
@@ -18,15 +20,14 @@ qt_add_dbus_adaptor(backendlauncher_SRCS ${CMAKE_SOURCE_DIR}/interfaces/org.kde.
 add_executable(kscreen_backend_launcher ${backendlauncher_SRCS})
 
 target_link_libraries(kscreen_backend_launcher
-    KF5Screen
+    KF6Screen
     Qt::Core
     Qt::Gui
-    Qt::X11Extras
     Qt::DBus
 )
 
 install(TARGETS kscreen_backend_launcher
-        DESTINATION ${CMAKE_INSTALL_FULL_LIBEXECDIR_KF5}
+        DESTINATION ${KDE_INSTALL_FULL_LIBEXECDIR_KF}
 )
 
 configure_file(org.kde.kscreen.service.cmake
@@ -34,4 +35,11 @@ configure_file(org.kde.kscreen.service.cmake
 )
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.kde.kscreen.service
         DESTINATION ${KDE_INSTALL_DBUSSERVICEDIR}
+)
+
+configure_file(plasma-kscreen.service.cmake
+               ${CMAKE_CURRENT_BINARY_DIR}/plasma-kscreen.service @ONLY
+)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/plasma-kscreen.service
+        DESTINATION ${KDE_INSTALL_SYSTEMDUSERUNITDIR}
 )

@@ -10,7 +10,6 @@
 
 #include "abstractbackend.h"
 #include "backendinterface.h"
-#include "config.h"
 #include "configmonitor.h"
 #include "configserializer_p.h"
 #include "getconfigoperation.h"
@@ -25,13 +24,11 @@
 #include <QGuiApplication>
 #include <QStandardPaths>
 #include <QThread>
-#include <QX11Info>
+#include <QtGui/private/qtx11extras_p.h>
 
 #include <memory>
 
 using namespace KScreen;
-
-Q_DECLARE_METATYPE(org::kde::kscreen::Backend *)
 
 const int BackendManager::sMaxCrashCount = 4;
 
@@ -52,6 +49,7 @@ BackendManager::BackendManager()
     , mShuttingDown(false)
     , mRequestsCounter(0)
     , mLoader(nullptr)
+    , mInProcessBackend(nullptr)
     , mMethod(OutOfProcess)
 {
     Log::instance();
@@ -87,7 +85,7 @@ void BackendManager::initMethod()
 
         mResetCrashCountTimer.setSingleShot(true);
         mResetCrashCountTimer.setInterval(60000);
-        connect(&mResetCrashCountTimer, &QTimer::timeout, this, [=]() {
+        connect(&mResetCrashCountTimer, &QTimer::timeout, this, [this]() {
             mCrashCount = 0;
         });
     }
@@ -165,10 +163,22 @@ QFileInfoList BackendManager::listBackends()
     const QStringList paths = QCoreApplication::libraryPaths();
     QFileInfoList finfos;
     for (const QString &path : paths) {
-        const QDir dir(path + QLatin1String("/kf5/kscreen/"), backendFilter, QDir::SortFlags(QDir::QDir::Name), QDir::NoDotAndDotDot | QDir::Files);
+        const QDir dir(path + QStringLiteral("/kf6/kscreen/"), backendFilter, QDir::SortFlags(QDir::QDir::Name), QDir::NoDotAndDotDot | QDir::Files);
         finfos.append(dir.entryInfoList());
     }
     return finfos;
+}
+
+void BackendManager::setBackendArgs(const QVariantMap &arguments)
+{
+    if (mBackendArguments != arguments) {
+        mBackendArguments = arguments;
+    }
+}
+
+QVariantMap BackendManager::getBackendArgs()
+{
+    return mBackendArguments;
 }
 
 KScreen::AbstractBackend *BackendManager::loadBackendPlugin(QPluginLoader *loader, const QString &name, const QVariantMap &arguments)
@@ -206,28 +216,23 @@ KScreen::AbstractBackend *BackendManager::loadBackendInProcess(const QString &na
                               "loadBackendPlugin() instead.";
         return nullptr;
     }
-    if (m_inProcessBackend.first != nullptr && (name.isEmpty() || m_inProcessBackend.first->name() == name)) {
-        return m_inProcessBackend.first;
-    } else if (m_inProcessBackend.first != nullptr && m_inProcessBackend.first->name() != name) {
+    if (mInProcessBackend != nullptr && (name.isEmpty() || mInProcessBackend->name() == name)) {
+        return mInProcessBackend;
+    } else if (mInProcessBackend != nullptr && mInProcessBackend->name() != name) {
         shutdownBackend();
     }
 
     if (mLoader == nullptr) {
         mLoader = new QPluginLoader(this);
     }
-    auto test_data_equals = QStringLiteral("TEST_DATA=");
-    QVariantMap arguments;
-    auto beargs = QString::fromLocal8Bit(qgetenv("KSCREEN_BACKEND_ARGS"));
-    if (beargs.startsWith(test_data_equals)) {
-        arguments[QStringLiteral("TEST_DATA")] = beargs.remove(test_data_equals);
-    }
-    auto backend = BackendManager::loadBackendPlugin(mLoader, name, arguments);
+
+    auto backend = BackendManager::loadBackendPlugin(mLoader, name, mBackendArguments);
     if (!backend) {
         return nullptr;
     }
     // qCDebug(KSCREEN) << "Connecting ConfigMonitor to backend.";
     ConfigMonitor::instance()->connectInProcessBackend(backend);
-    m_inProcessBackend = qMakePair<KScreen::AbstractBackend *, QVariantMap>(backend, arguments);
+    mInProcessBackend = backend;
     setConfig(backend->config());
     return backend;
 }
@@ -247,20 +252,7 @@ void BackendManager::requestBackend()
     }
     ++mRequestsCounter;
 
-    const QByteArray args = qgetenv("KSCREEN_BACKEND_ARGS");
-    QVariantMap arguments;
-    if (!args.isEmpty()) {
-        const QList<QByteArray> arglist = args.split(';');
-        for (const QByteArray &arg : arglist) {
-            const int pos = arg.indexOf('=');
-            if (pos == -1) {
-                continue;
-            }
-            arguments.insert(QString::fromUtf8(arg.left(pos)), arg.mid(pos + 1));
-        }
-    }
-
-    startBackend(QString::fromLatin1(qgetenv("KSCREEN_BACKEND")), arguments);
+    startBackend(QString::fromLatin1(qgetenv("KSCREEN_BACKEND")), mBackendArguments);
 }
 
 void BackendManager::emitBackendReady()
@@ -316,7 +308,7 @@ void BackendManager::onBackendRequestDone(QDBusPendingCallWatcher *watcher)
     }
 
     // The launcher has successfully loaded the backend we wanted and registered
-    // it to DBus (hopefuly), let's try to get an interface for the backend.
+    // it to DBus (hopefully), let's try to get an interface for the backend.
     if (mInterface) {
         invalidateInterface();
     }
@@ -332,7 +324,7 @@ void BackendManager::onBackendRequestDone(QDBusPendingCallWatcher *watcher)
     // can invalidate the interface
     mServiceWatcher.addWatchedService(mBackendService);
 
-    // Immediatelly request config
+    // Immediately request config
     connect(new GetConfigOperation(GetConfigOperation::NoEDID), &GetConfigOperation::finished, [&](ConfigOperation *op) {
         mConfig = qobject_cast<GetConfigOperation *>(op)->config();
         emitBackendReady();
@@ -376,9 +368,8 @@ void BackendManager::shutdownBackend()
     if (mMethod == InProcess) {
         delete mLoader;
         mLoader = nullptr;
-        m_inProcessBackend.second.clear();
-        delete m_inProcessBackend.first;
-        m_inProcessBackend.first = nullptr;
+        delete mInProcessBackend;
+        mInProcessBackend = nullptr;
     } else {
         if (mBackendService.isEmpty() && !mInterface) {
             return;
@@ -404,3 +395,5 @@ void BackendManager::shutdownBackend()
         }
     }
 }
+
+#include "moc_backendmanager_p.cpp"
