@@ -16,6 +16,7 @@
 #include "../src/getconfigoperation.h"
 #include "../src/mode.h"
 #include "../src/output.h"
+#include "../src/screen.h"
 #include "../src/setconfigoperation.h"
 
 // KWayland
@@ -115,7 +116,7 @@ void testWaylandBackend::verifyScreen()
 void testWaylandBackend::verifyOutputs()
 {
     bool primaryFound = false;
-    for (const KScreen::OutputPtr op : m_config->outputs()) {
+    for (const KScreen::OutputPtr &op : m_config->outputs()) {
         if (op->isPrimary()) {
             primaryFound = true;
         }

@@ -9,22 +9,13 @@
 #include "config.h"
 
 #include <QDir>
-#include <QEventLoop>
 #include <QLoggingCategory>
 #include <QScreen>
 #include <QSize>
 #include <QSocketNotifier>
 
-namespace KWayland
-{
-namespace Client
-{
-class ConnectionThread;
-class EventQueue;
-class Registry;
-class OutputManagement;
-}
-}
+struct kde_output_device_v2;
+struct wl_registry;
 
 namespace KScreen
 {
@@ -32,6 +23,7 @@ class Output;
 class WaylandOutputDevice;
 class WaylandScreen;
 class WaylandOutputManagement;
+class WaylandOutputOrder;
 
 /**
  * @class WaylandConfig
@@ -52,26 +44,27 @@ class WaylandConfig : public QObject
 
 public:
     explicit WaylandConfig(QObject *parent = nullptr);
-    ~WaylandConfig() override;
+    ~WaylandConfig();
 
     KScreen::ConfigPtr currentConfig();
     QMap<int, WaylandOutputDevice *> outputMap() const;
 
-    void applyConfig(const KScreen::ConfigPtr &newConfig);
+    bool applyConfig(const KScreen::ConfigPtr &newConfig);
+    WaylandOutputDevice *findOutputDevice(struct ::kde_output_device_v2 *outputdevice) const;
 
     bool isReady() const;
 
 Q_SIGNALS:
     void configChanged();
     void initialized();
+    void globalRemoved(uint32_t name);
 
 private:
     void setupRegistry();
     void checkInitialized();
-    void disconnected();
+    void handleActiveChanged();
 
     void initKWinTabletMode();
-    void initConnection();
 
     void addOutput(quint32 name, quint32 version);
     void removeOutput(WaylandOutputDevice *output);
@@ -80,10 +73,10 @@ private:
     void unblockSignals();
     void tryPendingConfig();
 
-    KWayland::Client::ConnectionThread *m_connection;
+    wl_registry *m_registry = nullptr;
 
-    KWayland::Client::Registry *m_registry;
-    WaylandOutputManagement *m_outputManagement = nullptr;
+    std::unique_ptr<WaylandOutputManagement> m_outputManagement;
+    std::unique_ptr<WaylandOutputOrder> m_outputOrder;
 
     // KWayland names as keys
     QMap<int, WaylandOutputDevice *> m_outputMap;
@@ -94,7 +87,6 @@ private:
 
     bool m_registryInitialized;
     bool m_blockSignals;
-    QEventLoop m_syncLoop;
     KScreen::ConfigPtr m_kscreenConfig;
     KScreen::ConfigPtr m_kscreenPendingConfig;
     WaylandScreen *m_screen;

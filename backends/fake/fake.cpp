@@ -7,7 +7,6 @@
 #include "fake.h"
 #include "parser.h"
 
-#include "config.h"
 #include "edid.h"
 #include <output.h>
 
@@ -45,7 +44,16 @@ void Fake::init(const QVariantMap &arguments)
     }
 
     mConfigFile = arguments[QStringLiteral("TEST_DATA")].toString();
-    qCDebug(KSCREEN_FAKE) << "Fake profile file:" << mConfigFile;
+
+    if (arguments.contains(QStringLiteral("SUPPORTED_FEATURES"))) {
+        bool ok = false;
+        const int features = arguments[QStringLiteral("SUPPORTED_FEATURES")].toInt(&ok);
+        if (ok) {
+            mSupportedFeatures = static_cast<KScreen::Config::Features>(features);
+        }
+    }
+
+    qCDebug(KSCREEN_FAKE) << "Fake profile file:" << mConfigFile << "features" << mSupportedFeatures;
 }
 
 void Fake::delayedInit()
@@ -72,6 +80,9 @@ ConfigPtr Fake::config() const
 {
     if (mConfig.isNull()) {
         mConfig = Parser::fromJson(mConfigFile);
+        if (mConfig) {
+            mConfig->setSupportedFeatures(mSupportedFeatures);
+        }
     }
 
     return mConfig;
@@ -136,17 +147,11 @@ void Fake::setEnabled(int outputId, bool enabled)
 void Fake::setPrimary(int outputId, bool primary)
 {
     KScreen::OutputPtr output = config()->output(outputId);
-    if (output->isPrimary() == primary) {
+    if (!output || output->isPrimary() == primary) {
         return;
     }
 
-    for (KScreen::OutputPtr output : config()->outputs()) {
-        if (output->id() == outputId) {
-            output->setPrimary(primary);
-        } else {
-            output->setPrimary(false);
-        }
-    }
+    mConfig->setPrimaryOutput(output);
     Q_EMIT configChanged(mConfig);
 }
 
@@ -187,3 +192,5 @@ void Fake::removeOutput(int outputId)
     mConfig->removeOutput(outputId);
     Q_EMIT configChanged(mConfig);
 }
+
+#include "moc_fake.cpp"

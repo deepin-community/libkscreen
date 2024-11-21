@@ -6,10 +6,10 @@
  */
 #pragma once
 
+#include <QList>
 #include <QMap>
 #include <QObject>
 #include <QRect>
-#include <QVector>
 
 #include <xcb/randr.h>
 
@@ -30,8 +30,8 @@ public:
     QRect geometry() const;
     xcb_randr_rotation_t rotation() const;
 
-    QVector<xcb_randr_output_t> possibleOutputs();
-    QVector<xcb_randr_output_t> outputs() const;
+    QList<xcb_randr_output_t> possibleOutputs();
+    QList<xcb_randr_output_t> outputs() const;
 
     bool connectOutput(xcb_randr_output_t output);
     void disconectOutput(xcb_randr_output_t output);
@@ -41,6 +41,10 @@ public:
     void update();
     void update(xcb_randr_crtc_t mode, xcb_randr_rotation_t rotation, const QRect &geom);
 
+    void updateTimestamp(const xcb_timestamp_t tmstamp);
+    void updateConfigTimestamp(const xcb_timestamp_t tmstamp);
+    bool isChangedFromOutside() const;
+
 private:
     xcb_randr_crtc_t m_crtc;
     xcb_randr_mode_t m_mode;
@@ -48,6 +52,9 @@ private:
     QRect m_geometry;
     xcb_randr_rotation_t m_rotation;
 
-    QVector<xcb_randr_output_t> m_possibleOutputs;
-    QVector<xcb_randr_output_t> m_outputs;
+    QList<xcb_randr_output_t> m_possibleOutputs;
+    QList<xcb_randr_output_t> m_outputs;
+
+    xcb_timestamp_t m_timestamp;
+    xcb_timestamp_t m_configTimestamp;
 };

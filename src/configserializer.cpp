@@ -8,7 +8,6 @@
 #include "configserializer_p.h"
 
 #include "config.h"
-#include "edid.h"
 #include "kscreen_debug.h"
 #include "mode.h"
 #include "output.h"
@@ -19,6 +18,10 @@
 #include <QJsonDocument>
 #include <QRect>
 
+#include <cstdint>
+#include <optional>
+
+using namespace Qt::StringLiterals;
 using namespace KScreen;
 
 QJsonObject ConfigSerializer::serializePoint(const QPoint &point)
@@ -79,7 +82,7 @@ QJsonObject ConfigSerializer::serializeOutput(const OutputPtr &output)
     obj[QLatin1String("connected")] = output->isConnected();
     obj[QLatin1String("followPreferredMode")] = output->followPreferredMode();
     obj[QLatin1String("enabled")] = output->isEnabled();
-    obj[QLatin1String("primary")] = output->isPrimary();
+    obj[QLatin1String("priority")] = static_cast<int>(output->priority());
     obj[QLatin1String("clones")] = serializeList(output->clones());
     // obj[QLatin1String("edid")] = output->edid()->raw();
     obj[QLatin1String("sizeMM")] = serializeSize(output->sizeMm());
@@ -102,6 +105,19 @@ QJsonObject ConfigSerializer::serializeOutput(const OutputPtr &output)
     if (output->capabilities() & Output::Capability::RgbRange) {
         obj[QLatin1String("rgbRange")] = static_cast<int>(output->rgbRange());
     }
+
+    if (output->capabilities() & Output::Capability::HighDynamicRange) {
+        obj[QLatin1String("hdr")] = output->isHdrEnabled();
+    }
+
+    if (output->capabilities() & Output::Capability::HighDynamicRange) {
+        obj[QLatin1String("sdr-brightness")] = static_cast<int>(output->sdrBrightness());
+    }
+
+    if (output->capabilities() & Output::Capability::WideColorGamut) {
+        obj[QLatin1String("wcg")] = output->isWcgEnabled();
+    }
+
     return obj;
 }
 
@@ -224,6 +240,8 @@ ConfigPtr ConfigSerializer::deserializeConfig(const QVariantMap &map)
 OutputPtr ConfigSerializer::deserializeOutput(const QDBusArgument &arg)
 {
     OutputPtr output(new Output);
+    std::optional<bool> primary = std::nullopt;
+    std::optional<uint32_t> priority = std::nullopt;
 
     arg.beginMap();
     while (!arg.atEnd()) {
@@ -258,7 +276,13 @@ OutputPtr ConfigSerializer::deserializeOutput(const QDBusArgument &arg)
         } else if (key == QLatin1String("enabled")) {
             output->setEnabled(value.toBool());
         } else if (key == QLatin1String("primary")) {
-            output->setPrimary(value.toBool());
+            // primary is deprecated, but if it appears in config for compatibility reason.
+            primary = value.toBool();
+        } else if (key == QLatin1String("priority")) {
+            // "priority" takes precedence over "primary", but we need to
+            //  check it after the loop, otherwise it may come before the
+            //  primary and get overridden.
+            priority = value.toUInt();
         } else if (key == QLatin1String("clones")) {
             output->setClones(deserializeList<int>(value.value<QDBusArgument>()));
         } else if (key == QLatin1String("replicationSource")) {
@@ -286,6 +310,12 @@ OutputPtr ConfigSerializer::deserializeOutput(const QDBusArgument &arg)
             output->setVrrPolicy(static_cast<Output::VrrPolicy>(value.toInt()));
         } else if (key == QLatin1String("rgbRange")) {
             output->setRgbRange(static_cast<Output::RgbRange>(value.toInt()));
+        } else if (key == "hdr"_L1) {
+            output->setHdrEnabled(value.toBool());
+        } else if (key == "sdr-brightness"_L1) {
+            output->setSdrBrightness(value.toUInt());
+        } else if (key == "wcg"_L1) {
+            output->setWcgEnabled(value.toBool());
         } else {
             qCWarning(KSCREEN) << "Invalid key in Output map: " << key;
             return OutputPtr();
@@ -293,6 +323,12 @@ OutputPtr ConfigSerializer::deserializeOutput(const QDBusArgument &arg)
         arg.endMapEntry();
     }
     arg.endMap();
+    if (primary.has_value()) {
+        output->setPriority(output->isEnabled() ? (primary.value() ? 1 : 2) : 0);
+    }
+    if (priority.has_value()) {
+        output->setPriority(priority.value());
+    }
     return output;
 }
 

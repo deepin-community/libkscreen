@@ -5,7 +5,8 @@
  */
 
 #include <QObject>
-#include <QtTest>
+#include <QSignalSpy>
+#include <QTest>
 
 #include "../src/backendmanager_p.h"
 #include "../src/config.h"
@@ -13,7 +14,6 @@
 #include "../src/getconfigoperation.h"
 #include "../src/mode.h"
 #include "../src/output.h"
-#include "../src/setconfigoperation.h"
 
 using namespace KScreen;
 
@@ -102,7 +102,7 @@ void TestModeListChange::cleanupTestCase()
 void TestModeListChange::modeListChange()
 {
     // json file for the fake backend
-    qputenv("KSCREEN_BACKEND_ARGS", "TEST_DATA=" TEST_DATA "singleoutput.json");
+    KScreen::BackendManager::instance()->setBackendArgs({{QStringLiteral("TEST_DATA"), TEST_DATA "singleoutput.json"}});
 
     const ConfigPtr config = getConfig();
     QVERIFY(!config.isNull());

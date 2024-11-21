@@ -5,13 +5,12 @@
  */
 
 #include "qscreenoutput.h"
-#include "qscreenbackend.h"
 
 #include <edid.h>
 #include <mode.h>
+#include <output.h>
 
 #include <QGuiApplication>
-#include <QScreen>
 
 using namespace KScreen;
 
@@ -55,7 +54,6 @@ void QScreenOutput::updateKScreenOutput(OutputPtr &output) const
     // Initialize primary output
     output->setEnabled(true);
     output->setConnected(true);
-    output->setPrimary(QGuiApplication::primaryScreen() == m_qscreen);
 
     // Rotation - translate QScreen::primaryOrientation() to Output::rotation()
     if (m_qscreen->primaryOrientation() == Qt::PortraitOrientation) {
@@ -97,3 +95,5 @@ void QScreenOutput::updateKScreenOutput(OutputPtr &output) const
     output->setModes(modes);
     output->setCurrentModeId(modeid);
 }
+
+#include "moc_qscreenoutput.cpp"

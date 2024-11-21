@@ -2,7 +2,9 @@ include_directories(${CMAKE_SOURCE_DIR}/src
                     ${CMAKE_BUILD_DIR}
 )
 
-set(xrandr_SRCS
+
+add_library(KSC_XRandR MODULE)
+target_sources(KSC_XRandR PRIVATE
     xrandr.cpp
     xrandrconfig.cpp
     xrandrcrtc.cpp
@@ -14,15 +16,13 @@ set(xrandr_SRCS
     ../utils.cpp
 )
 
-add_library(KSC_XRandR MODULE ${xrandr_SRCS})
-
-set_target_properties(KSC_XRandR PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/kf5/kscreen")
+set_target_properties(KSC_XRandR PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/kf6/kscreen")
 set_target_properties(KSC_XRandR PROPERTIES PREFIX "")
 target_link_libraries(KSC_XRandR Qt::Core
                                  Qt::Gui
-                                 Qt::X11Extras
+                                 Qt::GuiPrivate # for QX11Info
                                  ${XCB_LIBRARIES}
-                                 KF5::Screen
+                                 KF6::Screen
 )
 
-install(TARGETS KSC_XRandR DESTINATION ${KDE_INSTALL_PLUGINDIR}/kf5/kscreen/)
+install(TARGETS KSC_XRandR DESTINATION ${KDE_INSTALL_PLUGINDIR}/kf6/kscreen/)

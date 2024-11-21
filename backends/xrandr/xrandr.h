@@ -11,7 +11,8 @@
 #include <QLoggingCategory>
 #include <QSize>
 
-#include "../xcbwrapper.h"
+#include <xcb/randr.h>
+#include <xcb/xcb.h>
 
 class QRect;
 class QTimer;
@@ -22,7 +23,7 @@ class XRandRConfig;
 class XRandR : public KScreen::AbstractBackend
 {
     Q_OBJECT
-    Q_PLUGIN_METADATA(IID "org.kf5.kscreen.backends.xrandr")
+    Q_PLUGIN_METADATA(IID "org.kf6.kscreen.backends.xrandr")
 
 public:
     explicit XRandR();
@@ -44,7 +45,7 @@ public:
 
 private:
     void outputChanged(xcb_randr_output_t output, xcb_randr_crtc_t crtc, xcb_randr_mode_t mode, xcb_randr_connection_t connection);
-    void crtcChanged(xcb_randr_crtc_t crtc, xcb_randr_mode_t mode, xcb_randr_rotation_t rotation, const QRect &geom);
+    void crtcChanged(xcb_randr_crtc_t crtc, xcb_randr_mode_t mode, xcb_randr_rotation_t rotation, const QRect &geom, xcb_timestamp_t timestamp);
     void screenChanged(xcb_randr_rotation_t rotation, const QSize &sizePx, const QSize &sizeMm);
 
     static quint8 *getXProperty(xcb_randr_output_t output, xcb_atom_t atom, size_t &len);

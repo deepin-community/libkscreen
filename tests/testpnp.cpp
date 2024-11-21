@@ -7,17 +7,16 @@
 
 #include "testpnp.h"
 
-#include "../src/config.h"
 #include "../src/configmonitor.h"
 #include "../src/edid.h"
 #include "../src/getconfigoperation.h"
 #include "../src/mode.h"
 #include "../src/output.h"
-#include "../src/screen.h"
 
 #include <QGuiApplication>
 #include <QRect>
 #include <QScreen>
+#include <cstdint>
 //#include <QX11Info>
 
 using namespace KScreen;
@@ -114,7 +113,7 @@ void TestPnp::print()
             continue;
         }
         qDebug() << "Enabled: " << output->isEnabled();
-        qDebug() << "Primary: " << output->isPrimary();
+        qDebug() << "Priority: " << output->priority();
         qDebug() << "Rotation: " << output->rotation();
         qDebug() << "Pos: " << output->pos();
         qDebug() << "MMSize: " << output->sizeMm();
@@ -158,3 +157,5 @@ void TestPnp::print()
         }
     }
 }
+
+#include "moc_testpnp.cpp"

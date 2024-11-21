@@ -15,7 +15,10 @@
 
 #include <configmonitor.h>
 #include <mode.h>
+#include <output.h>
 
+#include <QEventLoop>
+#include <QProcess>
 #include <QSettings>
 #include <QStandardPaths>
 
@@ -26,8 +29,7 @@ WaylandBackend::WaylandBackend()
     , m_internalConfig(new WaylandConfig(this))
 {
     qCDebug(KSCREEN_WAYLAND) << "Loading Wayland backend.";
-
-    connect(m_internalConfig, &WaylandConfig::configChanged, this, [this]() {
+    connect(m_internalConfig, &WaylandConfig::configChanged, this, [this] {
         Q_EMIT configChanged(m_internalConfig->currentConfig());
     });
 }
@@ -53,7 +55,15 @@ void WaylandBackend::setConfig(const KScreen::ConfigPtr &newconfig)
     if (!newconfig) {
         return;
     }
-    m_internalConfig->applyConfig(newconfig);
+    // wait for KWin reply
+    QEventLoop loop;
+
+    connect(m_internalConfig, &WaylandConfig::configChanged, &loop, &QEventLoop::quit);
+    if (!m_internalConfig->applyConfig(newconfig)) {
+        return;
+    }
+
+    loop.exec();
 }
 
 QByteArray WaylandBackend::edid(int outputId) const
@@ -69,3 +79,5 @@ bool WaylandBackend::isValid() const
 {
     return m_internalConfig->isReady();
 }
+
+#include "moc_waylandbackend.cpp"

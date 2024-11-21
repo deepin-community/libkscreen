@@ -6,20 +6,19 @@
  */
 #include "xrandr.h"
 
-#include "../xcbeventlistener.h"
-#include "../xcbwrapper.h"
 #include "xrandrconfig.h"
 #include "xrandrscreen.h"
 
-#include "config.h"
-#include "edid.h"
-#include "output.h"
+#include "../xcbeventlistener.h"
+#include "../xcbwrapper.h"
+
+#include "types.h"
 
 #include <QRect>
 #include <QTime>
 #include <QTimer>
 
-#include <QX11Info>
+#include <QtGui/private/qtx11extras_p.h>
 
 xcb_screen_t *XRandR::s_screen = nullptr;
 xcb_window_t XRandR::s_rootWindow = 0;
@@ -45,6 +44,7 @@ XRandR::XRandR()
     qRegisterMetaType<xcb_randr_mode_t>("xcb_randr_mode_t");
     qRegisterMetaType<xcb_randr_connection_t>("xcb_randr_connection_t");
     qRegisterMetaType<xcb_randr_rotation_t>("xcb_randr_rotation_t");
+    qRegisterMetaType<xcb_timestamp_t>("xcb_timestamp_t");
 
     // Use our own connection to make sure that we won't mess up Qt's connection
     // if something goes wrong on our side.
@@ -138,20 +138,20 @@ void XRandR::outputChanged(xcb_randr_output_t output, xcb_randr_crtc_t crtc, xcb
         // info is valid: the output is still there
     }
 
-    XCB::PrimaryOutput primary(XRandR::rootWindow());
-    xOutput->update(crtc, mode, connection, (primary->output == output));
+    xOutput->update(crtc, mode, connection);
     qCDebug(KSCREEN_XRANDR) << "Output" << xOutput->id() << ": connected =" << xOutput->isConnected() << ", enabled =" << xOutput->isEnabled();
 }
 
-void XRandR::crtcChanged(xcb_randr_crtc_t crtc, xcb_randr_mode_t mode, xcb_randr_rotation_t rotation, const QRect &geom)
+void XRandR::crtcChanged(xcb_randr_crtc_t crtc, xcb_randr_mode_t mode, xcb_randr_rotation_t rotation, const QRect &geom, xcb_timestamp_t timestamp)
 {
     XRandRCrtc *xCrtc = s_internalConfig->crtc(crtc);
     if (!xCrtc) {
         s_internalConfig->addNewCrtc(crtc);
-    } else {
-        xCrtc->update(mode, rotation, geom);
+        xCrtc = s_internalConfig->crtc(crtc);
     }
 
+    xCrtc->update(mode, rotation, geom); // BUG 472280 Still need to call update(...) because the timestamp is newer
+    xCrtc->updateConfigTimestamp(timestamp);
     m_configChangeCompressor->start();
 }
 
@@ -204,17 +204,18 @@ bool XRandR::isValid() const
 
 quint8 *XRandR::getXProperty(xcb_randr_output_t output, xcb_atom_t atom, size_t &len)
 {
-    quint8 *result;
+    quint8 *result = nullptr;
 
     auto cookie = xcb_randr_get_output_property(XCB::connection(), output, atom, XCB_ATOM_ANY, 0, 100, false, false);
     auto reply = xcb_randr_get_output_property_reply(XCB::connection(), cookie, nullptr);
+    if (!reply) {
+        return result;
+    }
 
     if (reply->type == XCB_ATOM_INTEGER && reply->format == 8) {
         result = new quint8[reply->num_items];
         memcpy(result, xcb_randr_get_output_property_data(reply), reply->num_items);
         len = reply->num_items;
-    } else {
-        result = nullptr;
     }
 
     free(reply);
@@ -291,3 +292,5 @@ xcb_screen_t *XRandR::screen()
 {
     return s_screen;
 }
+
+#include "moc_xrandr.cpp"

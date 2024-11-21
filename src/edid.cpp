@@ -46,6 +46,7 @@ public:
 
     Private(const Private &other)
         : valid(other.valid)
+        , rawData(other.rawData)
         , monitorName(other.monitorName)
         , vendorName(other.vendorName)
         , serialNumber(other.serialNumber)
@@ -69,6 +70,7 @@ public:
     QString edidParseString(const quint8 *data) const;
 
     bool valid;
+    QByteArray rawData;
     QString monitorName;
     QString vendorName;
     QString serialNumber;
@@ -227,11 +229,19 @@ QQuaternion Edid::white() const
     return d->white;
 }
 
-bool Edid::Private::parse(const QByteArray &rawData)
+QByteArray Edid::rawData() const
+{
+    if (d->valid) {
+        return d->rawData;
+    }
+    return QByteArray();
+}
+
+bool Edid::Private::parse(const QByteArray &rawData_)
 {
     quint32 serial;
-    const quint8 *data = reinterpret_cast<const quint8 *>(rawData.constData());
-    int length = rawData.length();
+    const quint8 *data = reinterpret_cast<const quint8 *>(rawData_.constData());
+    int length = rawData_.length();
 
     /* check header */
     if (length < 128) {
@@ -253,9 +263,9 @@ bool Edid::Private::parse(const QByteArray &rawData)
      * |\---/\---/\---/
      * R  C1   C2   C3 */
     pnpId.resize(3);
-    pnpId[0] = 'A' + ((data[GCM_EDID_OFFSET_PNPID + 0] & 0x7c) / 4) - 1;
-    pnpId[1] = 'A' + ((data[GCM_EDID_OFFSET_PNPID + 0] & 0x3) * 8) + ((data[GCM_EDID_OFFSET_PNPID + 1] & 0xe0) / 32) - 1;
-    pnpId[2] = 'A' + (data[GCM_EDID_OFFSET_PNPID + 1] & 0x1f) - 1;
+    pnpId[0] = QLatin1Char('A' + ((data[GCM_EDID_OFFSET_PNPID + 0] & 0x7c) / 4) - 1);
+    pnpId[1] = QLatin1Char('A' + ((data[GCM_EDID_OFFSET_PNPID + 0] & 0x3) * 8) + ((data[GCM_EDID_OFFSET_PNPID + 1] & 0xe0) / 32) - 1);
+    pnpId[2] = QLatin1Char('A' + (data[GCM_EDID_OFFSET_PNPID + 1] & 0x1f) - 1);
 
     // load the PNP_IDS file and load the vendor name
     QFile pnpIds(QStringLiteral(PNP_IDS));
@@ -361,6 +371,7 @@ bool Edid::Private::parse(const QByteArray &rawData)
     hash.addData(reinterpret_cast<const char *>(data), length);
     checksum = QString::fromLatin1(hash.result().toHex());
 
+    rawData = rawData_;
     valid = true;
     return valid;
 }
@@ -401,3 +412,5 @@ QString Edid::Private::edidParseString(const quint8 *data) const
     }
     return text;
 }
+
+#include "moc_edid.cpp"

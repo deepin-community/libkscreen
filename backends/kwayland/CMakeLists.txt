@@ -14,29 +14,33 @@ ecm_qt_declare_logging_category(wayland_SRCS
                                 HEADER kscreen_kwayland_logging.h
                                 IDENTIFIER KSCREEN_WAYLAND
                                 CATEGORY_NAME kscreen.kwayland
+				DESCRIPTION "kscreen wayland"
+				EXPORT KSCREEN
 )
 
-ecm_add_qtwayland_client_protocol(wayland_SRCS
-    PROTOCOL ${PLASMA_WAYLAND_PROTOCOLS_DIR}/kde-output-device-v2.xml
-    BASENAME kde-output-device-v2
+add_library(KSC_KWayland MODULE)
+
+if (Qt6_VERSION VERSION_GREATER_EQUAL "6.8.0")
+    set(private_code_option  "PRIVATE_CODE")
+endif()
+qt6_generate_wayland_protocol_client_sources(KSC_KWayland
+    FILES
+        ${PLASMA_WAYLAND_PROTOCOLS_DIR}/kde-output-device-v2.xml
+        ${PLASMA_WAYLAND_PROTOCOLS_DIR}/kde-output-management-v2.xml
+        ${PLASMA_WAYLAND_PROTOCOLS_DIR}/kde-output-order-v1.xml
+    ${private_code_option}
 )
 
-ecm_add_qtwayland_client_protocol(wayland_SRCS
-    PROTOCOL ${PLASMA_WAYLAND_PROTOCOLS_DIR}/kde-output-management-v2.xml
-    BASENAME kde-output-management-v2
-)
+target_sources(KSC_KWayland PRIVATE ${wayland_SRCS})
 
-
-add_library(KSC_KWayland MODULE ${wayland_SRCS})
-
-set_target_properties(KSC_KWayland PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/kf5/kscreen")
+set_target_properties(KSC_KWayland PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/kf6/kscreen")
 set_target_properties(KSC_KWayland PROPERTIES PREFIX "")
 target_link_libraries(KSC_KWayland Qt::Core
                                   Qt::DBus
                                   Qt::Gui
-                                  KF5::Screen
-                                  KF5::WaylandClient
+                                  Qt::WaylandClient
+                                  KF6::Screen
                                   Wayland::Client
 )
 
-install(TARGETS KSC_KWayland DESTINATION ${KDE_INSTALL_PLUGINDIR}/kf5/kscreen/)
+install(TARGETS KSC_KWayland DESTINATION ${KDE_INSTALL_PLUGINDIR}/kf6/kscreen/)

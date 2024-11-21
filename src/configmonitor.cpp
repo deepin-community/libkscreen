@@ -24,7 +24,6 @@ class Q_DECL_HIDDEN ConfigMonitor::Private : public QObject
 public:
     Private(ConfigMonitor *q);
 
-    void updateConfigs();
     void onBackendReady(org::kde::kscreen::Backend *backend);
     void backendConfigChanged(const QVariantMap &configMap);
     void configDestroyed(QObject *removedConfig);
@@ -224,7 +223,7 @@ void ConfigMonitor::removeConfig(const ConfigPtr &config)
 void ConfigMonitor::connectInProcessBackend(KScreen::AbstractBackend *backend)
 {
     Q_ASSERT(BackendManager::instance()->method() == BackendManager::InProcess);
-    connect(backend, &AbstractBackend::configChanged, [=](KScreen::ConfigPtr config) {
+    connect(backend, &AbstractBackend::configChanged, [this](KScreen::ConfigPtr config) {
         if (config.isNull()) {
             return;
         }
@@ -234,3 +233,5 @@ void ConfigMonitor::connectInProcessBackend(KScreen::AbstractBackend *backend)
 }
 
 #include "configmonitor.moc"
+
+#include "moc_configmonitor.cpp"

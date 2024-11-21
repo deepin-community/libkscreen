@@ -8,7 +8,8 @@
 
 #include "qscreenbackend.h"
 #include "qscreenconfig.h"
-#include "qscreenoutput.h"
+
+#include <config.h>
 
 using namespace KScreen;
 
@@ -60,3 +61,5 @@ bool QScreenBackend::isValid() const
 {
     return m_isValid;
 }
+
+#include "moc_qscreenbackend.cpp"

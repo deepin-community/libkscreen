@@ -9,6 +9,7 @@
 #include "waylandoutputdevice.h"
 
 #include <mode.h>
+#include <screen.h>
 
 using namespace KScreen;
 
@@ -50,3 +51,5 @@ void WaylandScreen::updateKScreenScreen(KScreen::ScreenPtr &screen) const
     screen->setCurrentSize(m_size);
     screen->setMaxActiveOutputsCount(m_outputCount);
 }
+
+#include "moc_waylandscreen.cpp"

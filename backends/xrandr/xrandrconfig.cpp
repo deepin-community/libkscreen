@@ -5,20 +5,25 @@
  *  SPDX-License-Identifier: LGPL-2.1-or-later
  */
 #include "xrandrconfig.h"
-#include "config.h"
-#include "edid.h"
-#include "output.h"
+
 #include "xrandr.h"
-#include "xrandrcrtc.h"
 #include "xrandrmode.h"
-#include "xrandroutput.h"
 #include "xrandrscreen.h"
 
 #include "../xcbwrapper.h"
 
+#include "config.h"
+#include "edid.h"
+#include "mode.h"
+#include "output.h"
+#include "screen.h"
+
 #include <QRect>
 #include <QScopedPointer>
-#include <QX11Info>
+#include <QtGui/private/qtx11extras_p.h>
+
+#include <optional>
+#include <utility>
 
 using namespace KScreen;
 
@@ -100,8 +105,8 @@ KScreen::ConfigPtr XRandRConfig::toKScreenConfig() const
 
     KScreen::OutputList kscreenOutputs;
 
-    for (auto iter = m_outputs.constBegin(); iter != m_outputs.constEnd(); ++iter) {
-        KScreen::OutputPtr kscreenOutput = (*iter)->toKScreenOutput();
+    for (const XRandROutput *output : std::as_const(m_outputs)) {
+        KScreen::OutputPtr kscreenOutput = output->toKScreenOutput();
         kscreenOutputs.insert(kscreenOutput->id(), kscreenOutput);
     }
 
@@ -113,6 +118,8 @@ KScreen::ConfigPtr XRandRConfig::toKScreenConfig() const
 
 void XRandRConfig::applyKScreenConfig(const KScreen::ConfigPtr &config)
 {
+    config->adjustPriorities(); // never trust input
+
     const KScreen::OutputList kscreenOutputs = config->outputs();
 
     const QSize newScreenSize = screenSize(config);
@@ -129,25 +136,25 @@ void XRandRConfig::applyKScreenConfig(const KScreen::ConfigPtr &config)
         QSize(qMax(newScreenSize.width(), currentScreenSize.width()), qMax(newScreenSize.height(), currentScreenSize.height()));
 
     int neededCrtcs = 0;
-    xcb_randr_output_t primaryOutput = 0;
-    xcb_randr_output_t oldPrimaryOutput = 0;
 
-    for (const XRandROutput *xrandrOutput : m_outputs) {
-        if (xrandrOutput->isPrimary()) {
-            oldPrimaryOutput = xrandrOutput->id();
-            break;
-        }
+    // pairs of before/after
+    QMap<xcb_randr_output_t, std::pair<std::optional<uint32_t>, std::optional<uint32_t>>> prioritiesChange;
+    for (const XRandROutput *xrandrOutput : std::as_const(m_outputs)) {
+        prioritiesChange[xrandrOutput->id()].first = std::optional(xrandrOutput->priority());
     }
+    for (const KScreen::OutputPtr &kscreenOutput : kscreenOutputs) {
+        prioritiesChange[kscreenOutput->id()].second = std::optional(kscreenOutput->priority());
+    }
+    const bool prioritiesDiffer = std::any_of(prioritiesChange.cbegin(), prioritiesChange.cend(), [](const auto &pair) {
+        const auto &[before, after] = pair;
+        return !before.has_value() || !after.has_value() || before.value() != after.value();
+    });
 
     KScreen::OutputList toDisable, toEnable, toChange;
 
     for (const KScreen::OutputPtr &kscreenOutput : kscreenOutputs) {
         xcb_randr_output_t outputId = kscreenOutput->id();
         XRandROutput *currentOutput = output(outputId);
-        // Only set the output as primary if it is enabled.
-        if (kscreenOutput->isPrimary() && kscreenOutput->isEnabled()) {
-            primaryOutput = outputId;
-        }
 
         const bool currentEnabled = currentOutput->isEnabled();
 
@@ -227,12 +234,15 @@ void XRandRConfig::applyKScreenConfig(const KScreen::ConfigPtr &config)
         return;
     }
 
-    qCDebug(KSCREEN_XRANDR) << "Actions to perform:"
-                            << "\n"
-                            << "\tPrimary Output:" << (primaryOutput != oldPrimaryOutput);
-    if (primaryOutput != oldPrimaryOutput) {
-        qCDebug(KSCREEN_XRANDR) << "\t\tOld:" << oldPrimaryOutput << "\n"
-                                << "\t\tNew:" << primaryOutput;
+    qCDebug(KSCREEN_XRANDR) << "Actions to perform:\n"
+                            << "\tPriorities:" << prioritiesDiffer;
+    for (auto it = prioritiesChange.constBegin(); it != prioritiesChange.constEnd(); it++) {
+        const auto &[before, after] = it.value();
+        if (before != after) {
+            qCDebug(KSCREEN_XRANDR) << "\tOutput" << it.key() << "\n"
+                                    << "\t\tOld:" << (before.has_value() ? QString::number(before.value()) : QStringLiteral("none")) << "\n"
+                                    << "\t\tNew:" << (after.has_value() ? QString::number(after.value()) : QStringLiteral("none"));
+        }
     }
 
     qCDebug(KSCREEN_XRANDR) << "\tChange Screen Size:" << (newScreenSize != currentScreenSize);
@@ -262,7 +272,7 @@ void XRandRConfig::applyKScreenConfig(const KScreen::ConfigPtr &config)
     XCB::GrabServer grabber;
 
     // If there is nothing to do, not even bother
-    if (oldPrimaryOutput == primaryOutput && toDisable.isEmpty() && toEnable.isEmpty() && toChange.isEmpty()) {
+    if (!prioritiesDiffer && toDisable.isEmpty() && toEnable.isEmpty() && toChange.isEmpty()) {
         if (newScreenSize != currentScreenSize) {
             setScreenSize(newScreenSize);
         }
@@ -298,8 +308,11 @@ void XRandRConfig::applyKScreenConfig(const KScreen::ConfigPtr &config)
         }
     }
 
-    if (oldPrimaryOutput != primaryOutput) {
-        setPrimaryOutput(primaryOutput);
+    for (auto it = prioritiesChange.constBegin(); it != prioritiesChange.constEnd(); it++) {
+        const xcb_randr_output_t outputId = it.key();
+        const auto &[before, after] = it.value();
+        const uint32_t priority = after.value_or(0);
+        setOutputPriority(outputId, priority);
     }
 
     if (forceScreenSizeUpdate || intermediateScreenSize != newScreenSize) {
@@ -345,7 +358,7 @@ void XRandRConfig::printConfig(const ConfigPtr &config) const
         }
 
         qCDebug(KSCREEN_XRANDR) << "Enabled: " << output->isEnabled() << "\n"
-                                << "Primary: " << output->isPrimary() << "\n"
+                                << "Priority: " << output->priority() << "\n"
                                 << "Rotation: " << output->rotation() << "\n"
                                 << "Pos: " << output->pos() << "\n"
                                 << "MMSize: " << output->sizeMm();
@@ -395,7 +408,7 @@ void XRandRConfig::printInternalCond() const
                                 << "Current mode id: " << output->currentModeId() << "\n"
                                 << "Connected: " << output->isConnected() << "\n"
                                 << "Enabled: " << output->isEnabled() << "\n"
-                                << "Primary: " << output->isPrimary();
+                                << "Priority: " << output->priority();
         if (!output->isEnabled()) {
             continue;
         }
@@ -449,15 +462,14 @@ bool XRandRConfig::setScreenSize(const QSize &size) const
     return true;
 }
 
-void XRandRConfig::setPrimaryOutput(xcb_randr_output_t outputId) const
+void XRandRConfig::setOutputPriority(xcb_randr_output_t outputId, uint32_t priority) const
 {
     qCDebug(KSCREEN_XRANDR) << "RRSetOutputPrimary"
                             << "\n"
-                            << "\tNew primary:" << outputId;
-    xcb_randr_set_output_primary(XCB::connection(), XRandR::rootWindow(), outputId);
+                            << "\tNew priority:" << priority;
 
-    for (XRandROutput *output : m_outputs) {
-        output->setIsPrimary(output->id() == outputId);
+    if (m_outputs.contains(outputId)) {
+        m_outputs[outputId]->setPriority(priority);
     }
 }
 
@@ -477,6 +489,8 @@ bool XRandRConfig::disableOutput(const OutputPtr &kscreenOutput) const
     qCDebug(KSCREEN_XRANDR) << "RRSetCrtcConfig (disable output)"
                             << "\n"
                             << "\tCRTC:" << crtc;
+
+    xOutput->setPriority(0);
 
     auto cookie = xcb_randr_set_crtc_config(XCB::connection(), //
                                             crtc,
@@ -500,10 +514,9 @@ bool XRandRConfig::disableOutput(const OutputPtr &kscreenOutput) const
     // Update the cached output now, otherwise we get RRNotify_CrtcChange notification
     // for an outdated output, which can lead to a crash.
     if (reply->status == XCB_RANDR_SET_CONFIG_SUCCESS) {
-        xOutput->update(XCB_NONE,
-                        XCB_NONE,
-                        xOutput->isConnected() ? XCB_RANDR_CONNECTION_CONNECTED : XCB_RANDR_CONNECTION_DISCONNECTED,
-                        kscreenOutput->isPrimary());
+        xOutput->update(XCB_NONE, XCB_NONE, xOutput->isConnected() ? XCB_RANDR_CONNECTION_CONNECTED : XCB_RANDR_CONNECTION_DISCONNECTED);
+        if (xOutput->crtc())
+            xOutput->crtc()->updateTimestamp(reply->timestamp);
     }
     return (reply->status == XCB_RANDR_SET_CONFIG_SUCCESS);
 }
@@ -550,7 +563,8 @@ bool XRandRConfig::enableOutput(const OutputPtr &kscreenOutput) const
         return false;
     }
 
-    xOutput->update(freeCrtc->crtc(), modeId, XCB_RANDR_CONNECTION_CONNECTED, kscreenOutput->isPrimary());
+    xOutput->update(freeCrtc->crtc(), modeId, XCB_RANDR_CONNECTION_CONNECTED);
+    xOutput->setPriority(kscreenOutput->priority());
     return true;
 }
 
@@ -573,14 +587,15 @@ bool XRandRConfig::changeOutput(const KScreen::OutputPtr &kscreenOutput) const
                             << "\n"
                             << "\tCRTC:" << xOutput->crtc()->crtc() << "\n"
                             << "\tPos:" << kscreenOutput->pos() << "\n"
-                            << "\tMode:" << modeId << kscreenOutput->currentMode() << "\n"
+                            << "\tMode:" << kscreenOutput->currentMode() << "Preferred:" << kscreenOutput->preferredModeId() << "\n"
                             << "\tRotation:" << kscreenOutput->rotation();
 
     if (!sendConfig(kscreenOutput, xOutput->crtc())) {
         return false;
     }
 
-    xOutput->update(xOutput->crtc()->crtc(), modeId, XCB_RANDR_CONNECTION_CONNECTED, kscreenOutput->isPrimary());
+    xOutput->update(xOutput->crtc()->crtc(), modeId, XCB_RANDR_CONNECTION_CONNECTED);
+    xOutput->setPriority(kscreenOutput->priority());
     return true;
 }
 
@@ -605,6 +620,11 @@ bool XRandRConfig::sendConfig(const KScreen::OutputPtr &kscreenOutput, XRandRCrt
         qCDebug(KSCREEN_XRANDR) << "\tResult: unknown (error)";
         return false;
     }
-    qCDebug(KSCREEN_XRANDR) << "\tResult: " << reply->status;
+
+    crtc->updateTimestamp(reply->timestamp);
+
+    qCDebug(KSCREEN_XRANDR) << "\tResult: " << reply->status << " timestamp: " << reply->timestamp;
     return (reply->status == XCB_RANDR_SET_CONFIG_SUCCESS);
 }
+
+#include "moc_xrandrconfig.cpp"
