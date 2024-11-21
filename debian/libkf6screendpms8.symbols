@@ -28,5 +28,3 @@ libKF6ScreenDpms.so.8 libkf6screendpms8 #MINVER#
  _ZTVN7KScreen4DpmsE@Base 4:6.1.0
  (optional=templinst)_ZZN9QMetaType21registerConverterImplI5QListIP7QScreenE9QIterableI13QMetaSequenceEEEbSt8functionIFbPKvPvEES_S_E10unregister@Base 4:6.1.0
  (optional=templinst)_ZZN9QMetaType23registerMutableViewImplI5QListIP7QScreenE9QIterableI13QMetaSequenceEEEbSt8functionIFbPvS9_EES_S_E10unregister@Base 4:6.1.0
- (arch=linux-any)org_kde_kwin_dpms_interface@Base 4:6.1.0
- (arch=linux-any)org_kde_kwin_dpms_manager_interface@Base 4:6.1.0
