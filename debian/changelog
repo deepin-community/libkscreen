@@ -1,3 +1,9 @@
+libkscreen (4:6.2.1-1deepin1) unstable; urgency=medium
+
+  * update symbols.
+
+ -- lichenggang <lichenggang@deepin.org>  Thu, 21 Nov 2024 15:40:46 +0800
+
 libkscreen (4:6.2.1-1) experimental; urgency=medium
 
   [ Aurélien COUDERC ]
